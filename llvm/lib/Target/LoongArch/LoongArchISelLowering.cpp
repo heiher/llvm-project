@@ -343,6 +343,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
   setTargetDAGCombine(ISD::SRL);
+  setTargetDAGCombine(ISD::SETCC);
 
   // Set DAG combine for 'LSX' feature.
 
@@ -2537,6 +2538,206 @@ Retry2:
   return SDValue();
 }
 
+// Checks to see if the value is the prescribed width and returns information
+// about its extension mode.
+static bool checkValueWidth(SDValue V, unsigned width,
+                            ISD::LoadExtType &ExtType) {
+  ExtType = ISD::NON_EXTLOAD;
+  switch (V.getNode()->getOpcode()) {
+  default:
+    return false;
+  case ISD::LOAD: {
+    LoadSDNode *LoadNode = cast<LoadSDNode>(V.getNode());
+    if ((LoadNode->getMemoryVT() == MVT::i8 && width == 8) ||
+        (LoadNode->getMemoryVT() == MVT::i16 && width == 16)) {
+      ExtType = LoadNode->getExtensionType();
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertSext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8 && width == 8) ||
+        (TypeNode->getVT() == MVT::i16 && width == 16)) {
+      ExtType = ISD::SEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  case ISD::AssertZext: {
+    VTSDNode *TypeNode = cast<VTSDNode>(V.getNode()->getOperand(1));
+    if ((TypeNode->getVT() == MVT::i8 && width == 8) ||
+        (TypeNode->getVT() == MVT::i16 && width == 16)) {
+      ExtType = ISD::ZEXTLOAD;
+      return true;
+    }
+    return false;
+  }
+  case ISD::Constant:
+  case ISD::TargetConstant: {
+    return std::abs(cast<ConstantSDNode>(V.getNode())->getSExtValue()) <
+           1LL << (width - 1);
+  }
+  }
+
+  return true;
+}
+
+// This function does a whole lot of voodoo to determine if the tests are
+// equivalent without and with a mask. Essentially what happens is that given a
+// DAG resembling:
+//
+//  +-------------+ +-------------+ +-------------+ +-------------+
+//  |    Input    | | AddConstant | | CompConstant| |     CC      |
+//  +-------------+ +-------------+ +-------------+ +-------------+
+//           |           |           |               |
+//           V           V           |    +----------+
+//          +-------------+  +----+  |    |
+//          |     ADD     |  |0xff|  |    |
+//          +-------------+  +----+  |    |
+//                  |           |    |    |
+//                  V           V    |    |
+//                 +-------------+   |    |
+//                 |     AND     |   |    |
+//                 +-------------+   |    |
+//                      |            |    |
+//                      +-----+      |    |
+//                            |      |    |
+//                            V      V    V
+//                           +-------------+
+//                           |     CMP     |
+//                           +-------------+
+//
+// The AND node may be safely removed for some combinations of inputs. In
+// particular we need to take into account the extension type of the Input,
+// the exact values of AddConstant, CompConstant, and CC, along with the nominal
+// width of the input (this can work for any width inputs, the above graph is
+// specific to 8 bits.
+//
+// isEquivalentMaskless() is the code for testing if the AND can be removed
+// factored out of the DAG recognition as the DAG can take several forms.
+
+static bool isEquivalentMaskless(ISD::CondCode CC, unsigned width,
+                                 ISD::LoadExtType ExtType, int AddConstant,
+                                 int CompConstant) {
+  // By being careful about our equations and only writing the in term
+  // symbolic values and well known constants (0, 1, -1, MaxUInt) we can
+  // make them generally applicable to all bit widths.
+  int MaxUInt = (1 << width);
+
+  // For the purposes of these comparisons sign extending the type is
+  // equivalent to zero extending the add and displacing it by half the integer
+  // width. Provided we are careful and make sure our equations are valid over
+  // the whole range we can just adjust the input and avoid writing equations
+  // for sign extended inputs.
+  if (ExtType == ISD::SEXTLOAD)
+    AddConstant -= (1 << (width - 1));
+
+  switch (CC) {
+  case ISD::SETGT:
+  case ISD::SETLE:
+    if ((AddConstant == 0) ||
+        (CompConstant == MaxUInt - 1 && AddConstant < 0) ||
+        (AddConstant >= 0 && CompConstant < 0) ||
+        (AddConstant <= 0 && CompConstant <= 0 && CompConstant < AddConstant))
+      return true;
+    break;
+  case ISD::SETGE:
+  case ISD::SETLT:
+    if ((AddConstant == 0) || (AddConstant >= 0 && CompConstant <= 0) ||
+        (AddConstant <= 0 && CompConstant <= 0 && CompConstant <= AddConstant))
+      return true;
+    break;
+  case ISD::SETUGT:
+  case ISD::SETULE:
+    if ((AddConstant >= 0 && CompConstant < 0) ||
+        (AddConstant <= 0 && CompConstant >= -1 &&
+         CompConstant < AddConstant + MaxUInt))
+      return true;
+    break;
+  case ISD::SETUGE:
+  case ISD::SETULT:
+    if ((AddConstant >= 0 && CompConstant <= 0) ||
+        (AddConstant <= 0 && CompConstant >= 0 &&
+         CompConstant <= AddConstant + MaxUInt))
+      return true;
+    break;
+  case ISD::SETEQ:
+  case ISD::SETNE:
+    if ((AddConstant > 0 && CompConstant < 0) ||
+        (AddConstant < 0 && CompConstant >= 0 &&
+         CompConstant < AddConstant + MaxUInt) ||
+        (AddConstant >= 0 && CompConstant >= 0 &&
+         CompConstant >= AddConstant) ||
+        (AddConstant <= 0 && CompConstant < 0 && CompConstant < AddConstant))
+      return true;
+    break;
+  default:
+    break;
+  }
+
+  return false;
+}
+
+static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const LoongArchSubtarget &Subtarget) {
+  SDNode *AndNode = N->getOperand(0).getNode();
+  unsigned MaskBits = 0;
+
+  if (AndNode->getOpcode() != ISD::AND)
+    return SDValue();
+
+  if (ConstantSDNode *CN = dyn_cast<ConstantSDNode>(AndNode->getOperand(1))) {
+    uint32_t CNV = CN->getZExtValue();
+    if (CNV == 255)
+      MaskBits = 8;
+    else if (CNV == 65535)
+      MaskBits = 16;
+  }
+
+  if (!MaskBits)
+    return SDValue();
+
+  SDValue AddValue = AndNode->getOperand(0);
+
+  if (AddValue.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  // The basic dag structure is correct, grab the inputs and validate them.
+
+  SDValue AddInputValue1 = AddValue.getNode()->getOperand(0);
+  SDValue AddInputValue2 = AddValue.getNode()->getOperand(1);
+  SDValue CmpInputValue = N->getOperand(1);
+
+  // The mask is present and the provenance of all the values is a smaller type,
+  // lets see if the mask is superfluous.
+
+  if (!isa<ConstantSDNode>(AddInputValue2.getNode()) ||
+      !isa<ConstantSDNode>(CmpInputValue.getNode()))
+    return SDValue();
+
+  ISD::LoadExtType ExtType;
+
+  if (!checkValueWidth(CmpInputValue, MaskBits, ExtType) ||
+      !checkValueWidth(AddInputValue2, MaskBits, ExtType) ||
+      !checkValueWidth(AddInputValue1, MaskBits, ExtType))
+    return SDValue();
+
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+
+  if (!isEquivalentMaskless(
+          CC, MaskBits, ExtType,
+          cast<ConstantSDNode>(AddInputValue2.getNode())->getSExtValue(),
+          cast<ConstantSDNode>(CmpInputValue.getNode())->getSExtValue()))
+    return SDValue();
+
+  // The AND is not necessary, remove it.
+
+  return DAG.getSetCC(SDLoc(N), N->getValueType(0), AddValue, CmpInputValue,
+                      CC);
+}
+
 // Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
 static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI,
@@ -3164,6 +3365,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performANDCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DAG, DCI, Subtarget);
+  case ISD::SETCC:
+    return performSETCCCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
     return performSRLCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
