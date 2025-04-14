@@ -13,16 +13,24 @@
 #ifndef LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHMCASMINFO_H
 #define LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHMCASMINFO_H
 
+#include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 
 namespace llvm {
 class Triple;
 
-class LoongArchMCAsmInfo : public MCAsmInfoELF {
+class LoongArchMCAsmInfoELF : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit LoongArchMCAsmInfo(const Triple &TargetTriple);
+  explicit LoongArchMCAsmInfoELF(const Triple &TargetTriple);
+};
+
+class LoongArchMCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
+  void anchor() override;
+
+public:
+  explicit LoongArchMCAsmInfoGNUCOFF(const Triple &TargetTriple);
 };
 
 } // end namespace llvm

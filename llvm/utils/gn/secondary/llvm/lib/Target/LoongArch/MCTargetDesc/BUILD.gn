@@ -62,5 +62,7 @@ static_library("MCTargetDesc") {
     "LoongArchMCTargetDesc.cpp",
     "LoongArchMatInt.cpp",
     "LoongArchTargetStreamer.cpp",
+    "LoongArchWinCOFFObjectWriter.cpp",
+    "LoongArchWinCOFFStreamer.cpp",
   ]
 }

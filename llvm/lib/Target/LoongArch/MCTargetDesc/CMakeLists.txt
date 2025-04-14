@@ -10,6 +10,8 @@ add_llvm_component_library(LLVMLoongArchDesc
   LoongArchMCTargetDesc.cpp
   LoongArchMatInt.cpp
   LoongArchTargetStreamer.cpp
+  LoongArchWinCOFFObjectWriter.cpp
+  LoongArchWinCOFFStreamer.cpp
 
   LINK_COMPONENTS
   MC

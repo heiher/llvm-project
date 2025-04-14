@@ -508,17 +508,42 @@ bool LoongArchAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   return true;
 }
 
-std::unique_ptr<MCObjectTargetWriter>
-LoongArchAsmBackend::createObjectTargetWriter() const {
-  return createLoongArchELFObjectWriter(
-      OSABI, Is64Bit, STI.hasFeature(LoongArch::FeatureRelax));
-}
+namespace {
+class LoongArchELFAsmBackend : public LoongArchAsmBackend {
+  uint8_t OSABI;
+
+public:
+  LoongArchELFAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
+                         bool Is64Bit, const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, Is64Bit, Options), OSABI(OSABI) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createLoongArchELFObjectWriter(
+        OSABI, Is64Bit, STI.hasFeature(LoongArch::FeatureRelax));
+  }
+};
+
+class LoongArchCOFFAsmBackend : public LoongArchAsmBackend {
+public:
+  LoongArchCOFFAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
+                          const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, Is64Bit, Options) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createLoongArchWinCOFFObjectWriter(Is64Bit);
+  }
+};
+} // end anonymous namespace
 
 MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,
                                               const MCSubtargetInfo &STI,
                                               const MCRegisterInfo &MRI,
                                               const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
+  if (TT.isOSBinFormatCOFF())
+    return new LoongArchCOFFAsmBackend(STI, TT.isArch64Bit(), Options);
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new LoongArchAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
+  return new LoongArchELFAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
 }

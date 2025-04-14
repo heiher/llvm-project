@@ -25,18 +25,19 @@
 namespace llvm {
 
 class LoongArchAsmBackend : public MCAsmBackend {
-  const MCSubtargetInfo &STI;
-  uint8_t OSABI;
-  bool Is64Bit;
-  const MCTargetOptions &TargetOptions;
   DenseMap<MCSection *, const MCSymbolRefExpr *> SecToAlignSym;
 
+protected:
+  const MCSubtargetInfo &STI;
+  const MCTargetOptions &TargetOptions;
+  bool Is64Bit;
+
 public:
-  LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
+  LoongArchAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
                       const MCTargetOptions &Options)
       : MCAsmBackend(llvm::endianness::little,
                      LoongArch::fixup_loongarch_relax),
-        STI(STI), OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {}
+        STI(STI), TargetOptions(Options), Is64Bit(Is64Bit) {}
   ~LoongArchAsmBackend() override {}
 
   bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
@@ -79,8 +80,6 @@ public:
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
-  std::unique_ptr<MCObjectTargetWriter>
-  createObjectTargetWriter() const override;
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
   DenseMap<MCSection *, const MCSymbolRefExpr *> &getSecToAlignSym() {
     return SecToAlignSym;

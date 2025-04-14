@@ -17,9 +17,9 @@
 
 using namespace llvm;
 
-void LoongArchMCAsmInfo::anchor() {}
+void LoongArchMCAsmInfoELF::anchor() {}
 
-LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
+LoongArchMCAsmInfoELF::LoongArchMCAsmInfoELF(const Triple &TT) {
   CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
   AlignmentIsInBytes = false;
   Data8bitsDirective = "\t.byte\t";
@@ -31,4 +31,20 @@ LoongArchMCAsmInfo::LoongArchMCAsmInfo(const Triple &TT) {
   SupportsDebugInformation = true;
   DwarfRegNumForCFI = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
+}
+
+void LoongArchMCAsmInfoGNUCOFF::anchor() {}
+
+LoongArchMCAsmInfoGNUCOFF::LoongArchMCAsmInfoGNUCOFF(const Triple &TT) {
+  CodePointerSize = CalleeSaveStackSlotSize = TT.isArch64Bit() ? 8 : 4;
+  AlignmentIsInBytes = false;
+  Data8bitsDirective = "\t.byte\t";
+  Data16bitsDirective = "\t.half\t";
+  Data32bitsDirective = "\t.word\t";
+  Data64bitsDirective = "\t.dword\t";
+  ZeroDirective = "\t.space\t";
+  CommentString = "//";
+  SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::WinEH;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
 }
