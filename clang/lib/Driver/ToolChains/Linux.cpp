@@ -203,7 +203,8 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::x86_64 && Triple.isX32())
     return "libx32";
 
-  if (Triple.getArch() == llvm::Triple::riscv32)
+  if (Triple.getArch() == llvm::Triple::riscv32 ||
+      Triple.getArch() == llvm::Triple::loongarch32)
     return "lib32";
 
   return Triple.isArch32Bit() ? "lib" : "lib64";
