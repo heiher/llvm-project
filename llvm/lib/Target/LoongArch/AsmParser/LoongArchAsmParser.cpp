@@ -36,7 +36,7 @@ class LoongArchAsmParser : public MCTargetAsmParser {
   SmallVector<FeatureBitset, 4> FeatureBitStack;
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
-  bool is64Bit() const { return getSTI().hasFeature(LoongArch::Feature64Bit); }
+  bool is64Bit() const { return getSTI().hasFeature(LoongArch::FeatureLA64); }
   LoongArchTargetStreamer &getTargetStreamer() {
     assert(getParser().getStreamer().getTargetStreamer() &&
            "do not have a target streamer");

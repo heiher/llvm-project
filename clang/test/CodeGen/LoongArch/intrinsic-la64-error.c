@@ -6,7 +6,7 @@
 
 #ifdef FEATURE_CHECK
 void test_feature(unsigned long *v_ul, int *v_i, float a, double b) {
-// CHECK: error: '__builtin_loongarch_cacop_w' needs target feature 32bit
+// CHECK: error: '__builtin_loongarch_cacop_w' needs target feature la32r
   __builtin_loongarch_cacop_w(1, v_ul[0], 1024);
 // CHECK: error: '__builtin_loongarch_movfcsr2gr' needs target feature f
   v_i[0] = __builtin_loongarch_movfcsr2gr(1);

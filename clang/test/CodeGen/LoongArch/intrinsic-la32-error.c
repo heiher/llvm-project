@@ -6,48 +6,48 @@
 
 #ifdef FEATURE_CHECK
 void test_feature(long *v_l, unsigned long *v_ul, int *v_i, unsigned ui, char c, short s) {
-// CHECK: error: '__builtin_loongarch_cacop_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_cacop_d' needs target feature la64
   __builtin_loongarch_cacop_d(1, v_ul[0], 1024);
 
-// CHECK: error: '__builtin_loongarch_crc_w_b_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crc_w_b_w' needs target feature la64
   v_i[0] = __builtin_loongarch_crc_w_b_w(c, v_i[0]);
-// CHECK: error: '__builtin_loongarch_crc_w_h_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crc_w_h_w' needs target feature la64
   v_i[1] =  __builtin_loongarch_crc_w_h_w(c, v_i[0]);
-// CHECK: error: '__builtin_loongarch_crc_w_w_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crc_w_w_w' needs target feature la64
   v_i[2] = __builtin_loongarch_crc_w_w_w(c, v_i[0]);
-// CHECK: error: '__builtin_loongarch_crc_w_d_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crc_w_d_w' needs target feature la64
   v_i[3] = __builtin_loongarch_crc_w_d_w(c, v_i[0]);
 
-// CHECK: error: '__builtin_loongarch_crcc_w_b_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crcc_w_b_w' needs target feature la64
   v_i[4] = __builtin_loongarch_crcc_w_b_w(c, v_i[0]);
-// CHECK: error: '__builtin_loongarch_crcc_w_h_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crcc_w_h_w' needs target feature la64
   v_i[5] = __builtin_loongarch_crcc_w_h_w(s, v_i[0]);
-// CHECK: error: '__builtin_loongarch_crcc_w_w_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crcc_w_w_w' needs target feature la64
   v_i[6] = __builtin_loongarch_crcc_w_w_w(v_i[0], v_i[1]);
-// CHECK: error: '__builtin_loongarch_crcc_w_d_w' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_crcc_w_d_w' needs target feature la64
   v_i[7] = __builtin_loongarch_crcc_w_d_w(v_l[0], v_i[0]);
 
-// CHECK: error: '__builtin_loongarch_csrrd_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_csrrd_d' needs target feature la64
   v_ul[0] = __builtin_loongarch_csrrd_d(1);
-// CHECK: error: '__builtin_loongarch_csrwr_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_csrwr_d' needs target feature la64
   v_ul[1] = __builtin_loongarch_csrwr_d(v_ul[0], 1);
-// CHECK: error: '__builtin_loongarch_csrxchg_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_csrxchg_d' needs target feature la64
   v_ul[2] = __builtin_loongarch_csrxchg_d(v_ul[0], v_ul[1], 1);
 
 
-// CHECK: error: '__builtin_loongarch_iocsrrd_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_iocsrrd_d' needs target feature la64
   v_ul[3] = __builtin_loongarch_iocsrrd_d(ui);
-// CHECK: error: '__builtin_loongarch_iocsrwr_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_iocsrwr_d' needs target feature la64
   __builtin_loongarch_iocsrwr_d(v_ul[0], ui);
 
-// CHECK: error: '__builtin_loongarch_asrtle_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_asrtle_d' needs target feature la64
   __builtin_loongarch_asrtle_d(v_l[0], v_l[1]);
-// CHECK: error: '__builtin_loongarch_asrtgt_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_asrtgt_d' needs target feature la64
   __builtin_loongarch_asrtgt_d(v_l[0], v_l[1]);
 
-// CHECK: error: '__builtin_loongarch_lddir_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_lddir_d' needs target feature la64
   v_ul[4] = __builtin_loongarch_lddir_d(v_l[0], 1);
-// CHECK: error: '__builtin_loongarch_ldpte_d' needs target feature 64bit
+// CHECK: error: '__builtin_loongarch_ldpte_d' needs target feature la64
   __builtin_loongarch_ldpte_d(v_l[0], 1);
 }
 #endif

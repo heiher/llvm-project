@@ -16,14 +16,14 @@
 // RUN: not %clang -c --target=loongarch64-linux-gnu -mrelax -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
 // RUN: not %clang -c --target=loongarch64 -mrelax -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
 
-// LA32: "target-features"="+32bit"
-// LA64: "target-features"="+64bit,+d,+f,+lsx,+ual"
+// LA32: "target-features"="+la32r"
+// LA64: "target-features"="+d,+f,+la64,+lsx,+ual"
 
-// LA32-NORELAX: "target-features"="+32bit,-relax"
-// LA64-NORELAX: "target-features"="+64bit,+d,+f,+lsx,+ual,-relax"
+// LA32-NORELAX: "target-features"="+la32r,-relax"
+// LA64-NORELAX: "target-features"="+d,+f,+la64,+lsx,+ual,-relax"
 
-// LA32-RELAX: "target-features"="+32bit,+relax"
-// LA64-RELAX: "target-features"="+64bit,+d,+f,+lsx,+relax,+ual"
+// LA32-RELAX: "target-features"="+la32r,+relax"
+// LA64-RELAX: "target-features"="+d,+f,+la64,+lsx,+relax,+ual"
 
 // SPLIT-DWARF:     "-split-dwarf-file"
 // ERR-SPLIT-DWARF: error: -gsplit-dwarf{{.*}} is unsupported with LoongArch linker relaxation (-mrelax)

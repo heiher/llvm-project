@@ -327,9 +327,9 @@ bool LoongArchTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
   if (getTriple().getArch() == llvm::Triple::loongarch64)
-    Features["64bit"] = true;
+    Features["la64"] = true;
   if (getTriple().getArch() == llvm::Triple::loongarch32)
-    Features["32bit"] = true;
+    Features["la32r"] = true;
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
@@ -341,8 +341,9 @@ bool LoongArchTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("loongarch32", !Is64Bit)
       .Case("loongarch64", Is64Bit)
-      .Case("32bit", !Is64Bit)
-      .Case("64bit", Is64Bit)
+      .Case("la32r", !Is64Bit)
+      .Case("la32s", !Is64Bit)
+      .Case("la64", Is64Bit)
       .Case("lsx", HasFeatureLSX)
       .Case("lasx", HasFeatureLASX)
       .Default(false);

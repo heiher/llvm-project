@@ -46,7 +46,7 @@ bool LoongArch::getArchFeatures(StringRef Arch,
   }
 
   if (Arch == "la64v1.0" || Arch == "la64v1.1") {
-    Features.push_back("+64bit");
+    Features.push_back("+la64");
     Features.push_back("+d");
     Features.push_back("+lsx");
     Features.push_back("+ual");

@@ -12,25 +12,35 @@ include "llvm/Target/Target.td"
 // LoongArch subtarget features and instruction predicates.
 //===----------------------------------------------------------------------===//
 
-// LoongArch is divided into two versions, the 32-bit version (LA32) and the
-// 64-bit version (LA64).
-def Feature64Bit
-    : SubtargetFeature<"64bit", "HasLA64", "true",
-                       "LA64 Basic Integer and Privilege Instruction Set">;
-def Feature32Bit
-    : SubtargetFeature<"32bit", "HasLA32", "true",
-                       "LA32 Basic Integer and Privilege Instruction Set">;
-def IsLA64
-    : Predicate<"Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of Feature64Bit),
-                         "LA64 Basic Integer and Privilege Instruction Set">;
+// LoongArch is divided into three versions: the 64-bit version (LA64), the
+// reduced 32-bit version (LA32R), and the standard 32-bit version (LA32S).
+def FeatureLA32R
+    : SubtargetFeature<"la32r", "HasLA32R", "true",
+                       "LA32 Reduced Basic Integer and Privilege Instruction Set">;
+def HasLA32R : Predicate<"Subtarget->hasLA32R()">;
+
+def FeatureLA32S
+    : SubtargetFeature<"la32s", "HasLA32S", "true",
+                       "LA32 Standard Basic Integer and Privilege Instruction Set",
+                       [FeatureLA32R]>;
+def HasLA32S : Predicate<"Subtarget->hasLA32S()">;
+
+def FeatureLA64
+    : SubtargetFeature<"la64", "HasLA64", "true",
+                       "LA64 Basic Integer and Privilege Instruction Set",
+                       [FeatureLA32S]>;
+
 def IsLA32
     : Predicate<"!Subtarget->is64Bit()">,
-      AssemblerPredicate<(all_of(not Feature64Bit)),
+      AssemblerPredicate<(all_of(not FeatureLA64)),
                          "LA32 Basic Integer and Privilege Instruction Set">;
+def IsLA64
+    : Predicate<"Subtarget->is64Bit()">,
+      AssemblerPredicate<(all_of FeatureLA64),
+                         "LA64 Basic Integer and Privilege Instruction Set">;
 
 defvar LA32 = DefaultMode;
-def LA64 : HwMode<"+64bit", [IsLA64]>;
+def LA64 : HwMode<"+la64", [IsLA64]>;
 
 // Single Precision floating point
 def FeatureBasicF
@@ -157,13 +167,13 @@ include "LoongArchInstrInfo.td"
 // LoongArch processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
-def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"generic-la32", NoSchedModel, [FeatureLA32R]>;
+def : ProcessorModel<"generic-la64", NoSchedModel, [FeatureLA64,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;
 
 // Generic 64-bit processor with double-precision floating-point support.
-def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"loongarch64", NoSchedModel, [FeatureLA64,
                                                    FeatureUAL,
                                                    FeatureBasicD]>;
 
@@ -171,13 +181,13 @@ def : ProcessorModel<"loongarch64", NoSchedModel, [Feature64Bit,
 // to change to the appropriate la32/la64 version.
 def : ProcessorModel<"generic", NoSchedModel, []>;
 
-def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la464", NoSchedModel, [FeatureLA64,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
                                              FeatureExtLBT]>;
 
-def : ProcessorModel<"la664", NoSchedModel, [Feature64Bit,
+def : ProcessorModel<"la664", NoSchedModel, [FeatureLA64,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
