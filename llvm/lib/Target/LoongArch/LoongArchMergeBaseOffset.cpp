@@ -80,7 +80,7 @@ INITIALIZE_PASS(LoongArchMergeBaseOffsetOpt, DEBUG_TYPE,
 // Detect either of the patterns:
 //
 // 1. (small/medium):
-//   pcalau12i vreg1, %pc_hi20(s)
+//   pcaxxu12i vreg1, %pc_hi20(s)
 //   addi.d    vreg2, vreg1, %pc_lo12(s)
 //
 // 2. (large):
@@ -103,11 +103,13 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
                                                  MachineInstr *&Lo20,
                                                  MachineInstr *&Hi12,
                                                  MachineInstr *&Last) {
-  if (Hi20.getOpcode() != LoongArch::PCALAU12I)
+  if (Hi20.getOpcode() != LoongArch::PCALAU12I &&
+      Hi20.getOpcode() != LoongArch::PCADDU12I)
     return false;
 
   const MachineOperand &Hi20Op1 = Hi20.getOperand(1);
-  if (LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_PCREL_HI)
+  if (LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_PCREL_HI &&
+      LoongArchII::getDirectFlags(Hi20Op1) != LoongArchII::MO_PCADD_HI)
     return false;
 
   auto isGlobalOrCPIOrBlockAddress = [](const MachineOperand &Op) {
@@ -158,8 +160,10 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
   }
 
   const MachineOperand &Lo12Op2 = Lo12->getOperand(2);
-  assert(Hi20.getOpcode() == LoongArch::PCALAU12I);
-  if (LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_PCREL_LO ||
+  assert(Hi20.getOpcode() == LoongArch::PCALAU12I ||
+         Hi20.getOpcode() == LoongArch::PCADDU12I);
+  if ((LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_PCREL_LO &&
+       LoongArchII::getDirectFlags(Lo12Op2) != LoongArchII::MO_PCADD_LO) ||
       !(isGlobalOrCPIOrBlockAddress(Lo12Op2) || Lo12Op2.isMCSymbol()) ||
       Lo12Op2.getOffset() != 0)
     return false;
@@ -299,7 +303,7 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
 //
 //        Base address lowering is of the form:
 //           1) pcala:
-//             Hi20:  pcalau12i vreg1, %pc_hi20(s)
+//             Hi20:  pcaxxu12i vreg1, %pc_hi20(s)
 //        +--- Lo12:  addi.d vreg2, vreg1, %pc_lo12(s)
 //        |    Lo20:  lu32i.d vreg2, %pc64_lo20(s) !
 //        +--- Hi12:  lu52i.d vreg2, vreg2, %pc64_hi12(s) !
@@ -427,7 +431,7 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
 
   // Look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
-  // offset into the PCALAU12I+(ADDI/ADDI+LU32I+LU52I) or
+  // offset into the PCAXXU12I+(ADDI/ADDI+LU32I+LU52I) or
   // LU12I_W+PseudoAddTPRel+ADDI.
   if (!MRI->hasOneUse(DestReg))
     return false;
@@ -549,13 +553,13 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   //
   // 1. (small/medium):
   //  1.1. pcala
-  //   pcalau12i vreg1, %pc_hi20(s)
+  //   pcaxxu12i vreg1, %pc_hi20(s)
   //   addi.d    vreg2, vreg1, %pc_lo12(s)
   //   ld.w      vreg3, 8(vreg2)
   //
   //   =>
   //
-  //   pcalau12i vreg1, %pc_hi20(s+8)
+  //   pcalxx12i vreg1, %pc_hi20(s+8)
   //   ld.w      vreg3, vreg1, %pc_lo12(s+8)(vreg1)
   //
   //  1.2. tls-le
@@ -709,13 +713,13 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   // be relaxed after being optimized.
   //
   // For example:
-  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   pcaxxu12i $a0, %pc_hi20(symbol)
   //   addi.d $a0, $a0, %pc_lo12(symbol)
   //   ld.w $a0, $a0, 0
   //
   //   =>
   //
-  //   pcalau12i $a0, %pc_hi20(symbol)
+  //   pcaxxu12i $a0, %pc_hi20(symbol)
   //   ld.w $a0, $a0, %pc_lo12(symbol)
   //
   // Code sequence optimized before can be relax by linker. But after being
@@ -728,7 +732,8 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     Lo20->getOperand(2).setOffset(NewOffset);
     Hi12->getOperand(2).setOffset(NewOffset);
   }
-  if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+  if (Hi20.getOpcode() == LoongArch::PCADDU12I ||
+      Hi20.getOpcode() == LoongArch::PCALAU12I) {
     Hi20.getOperand(1).setTargetFlags(
         LoongArchII::getDirectFlags(Hi20.getOperand(1)));
     ImmOp.setTargetFlags(LoongArchII::getDirectFlags(ImmOp));
@@ -786,7 +791,8 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
     return true;
   }
 
-  if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+  if (Hi20.getOpcode() == LoongArch::PCADDU12I ||
+      Hi20.getOpcode() == LoongArch::PCALAU12I) {
     MRI->replaceRegWith(Lo12.getOperand(0).getReg(),
                         Hi20.getOperand(0).getReg());
   } else if (Hi20.getOpcode() == LoongArch::LU12I_W) {
@@ -813,7 +819,8 @@ bool LoongArchMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       MachineInstr *Lo20 = nullptr;
       MachineInstr *Hi12 = nullptr;
       MachineInstr *Last = nullptr;
-      if (Hi20.getOpcode() == LoongArch::PCALAU12I) {
+      if (Hi20.getOpcode() == LoongArch::PCADDU12I ||
+          Hi20.getOpcode() == LoongArch::PCALAU12I) {
         // Detect foldable pcala code sequence in small/medium/large code model.
         if (!detectFoldable(Hi20, Lo12, Lo20, Hi12, Last))
           continue;

@@ -1,14 +1,9 @@
 # REQUIRES: loongarch
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax %s -o %t.64.o
-# RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.32.o -o %t.32
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 %t.64.o -o %t.64
-# RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 --no-relax %t.32.o -o %t.32n
 # RUN: ld.lld --section-start=.text=0x10000 --section-start=.text2=0x20000 -e 0 --no-relax %t.64.o -o %t.64n
-# RUN: llvm-objdump -td --no-show-raw-insn %t.32 | FileCheck --check-prefixes=RELAX,NOOLD %s
 # RUN: llvm-objdump -td --no-show-raw-insn %t.64 | FileCheck --check-prefixes=RELAX,NOOLD %s
-# RUN: llvm-objdump -td --no-show-raw-insn %t.32n | FileCheck --check-prefixes=NORELAX,NOOLD %s
 # RUN: llvm-objdump -td --no-show-raw-insn %t.64n | FileCheck --check-prefixes=NORELAX,NOOLD %s
 
 ## Test the R_LARCH_ALIGN without symbol index.

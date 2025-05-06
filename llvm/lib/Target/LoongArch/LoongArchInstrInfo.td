@@ -1583,12 +1583,10 @@ def : Pat<(loongarch_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 let isCall = 1, Defs = [R1, R20], Size = 8 in
 def PseudoCALL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$func)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium tglobaladdr:$func),
           (PseudoCALL_MEDIUM tglobaladdr:$func)>;
 def : Pat<(loongarch_call_medium texternalsym:$func),
           (PseudoCALL_MEDIUM texternalsym:$func)>;
-} // Predicates = [IsLA64]
 
 // Function call with 'Large' code model.
 let isCall = 1, Defs = [R1] in
@@ -1605,10 +1603,9 @@ let isCall = 1, Defs = [R1] in
 def PseudoCALLIndirect : Pseudo<(outs), (ins GPR:$rj),
                                 [(loongarch_call GPR:$rj)]>,
                          PseudoInstExpansion<(JIRL R1, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_call_medium GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_call_large GPR:$rj), (PseudoCALLIndirect GPR:$rj)>;
-}
 
 let isCall = 1, hasSideEffects = 0, mayStore = 0, mayLoad = 0, Defs = [R1] in
 def PseudoJIRL_CALL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
@@ -1633,12 +1630,10 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     Uses = [R3], Defs = [R20], Size = 8 in
 def PseudoTAIL_MEDIUM : Pseudo<(outs), (ins bare_symbol:$dst)>;
 
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium (iPTR tglobaladdr:$dst)),
           (PseudoTAIL_MEDIUM tglobaladdr:$dst)>;
 def : Pat<(loongarch_tail_medium (iPTR texternalsym:$dst)),
           (PseudoTAIL_MEDIUM texternalsym:$dst)>;
-} // Predicates = [IsLA64]
 
 // Tail call with 'Large' code model.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
@@ -1655,10 +1650,9 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRT:$rj),
                                 [(loongarch_tail GPRT:$rj)]>,
                          PseudoInstExpansion<(JIRL R0, GPR:$rj, 0)>;
-let Predicates = [IsLA64] in {
 def : Pat<(loongarch_tail_medium GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
+let Predicates = [IsLA64] in
 def : Pat<(loongarch_tail_large GPR:$rj), (PseudoTAILIndirect GPR:$rj)>;
-}
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     hasSideEffects = 0, mayStore = 0, mayLoad = 0, Uses = [R3] in
@@ -1670,6 +1664,19 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
 def PseudoJIRL_TAIL : Pseudo<(outs), (ins GPR:$rj, simm16_lsl2:$imm16)>,
                       PseudoInstExpansion<(JIRL R0, GPR:$rj,
                                            simm16_lsl2:$imm16)>;
+
+/// call30/taill30 macro instructions
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,
+    Defs = [R1], hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoCALL30 : Pseudo<(outs), (ins bare_symbol:$dst), [],
+                          "call30", "$dst">,
+                   Requires<[IsLA32]>;
+let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [R3],
+    isCodeGenOnly = 0, isAsmParserOnly = 1, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoTAIL30 : Pseudo<(outs), (ins GPR:$tmp, bare_symbol:$dst), [],
+                          "tail30", "$tmp, $dst">,
+                   Requires<[IsLA32]>;
 
 /// call36/taill36 macro instructions
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, isAsmParserOnly = 1,

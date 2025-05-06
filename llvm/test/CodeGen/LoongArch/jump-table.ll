@@ -85,8 +85,9 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-JT-NEXT:    ori $a2, $zero, 3
 ; LA32-JT-NEXT:    bltu $a2, $a0, .LBB0_7
 ; LA32-JT-NEXT:  # %bb.1: # %entry
-; LA32-JT-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
-; LA32-JT-NEXT:    addi.w $a2, $a2, %pc_lo12(.LJTI0_0)
+; LA32-JT-NEXT:  .Lpcadd_hi0:
+; LA32-JT-NEXT:    pcaddu12i $a2, %pcadd_hi20(.LJTI0_0)
+; LA32-JT-NEXT:    addi.w $a2, $a2, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-JT-NEXT:    alsl.w $a0, $a0, $a2, 2
 ; LA32-JT-NEXT:    ld.w $a0, $a0, 0
 ; LA32-JT-NEXT:    jr $a0

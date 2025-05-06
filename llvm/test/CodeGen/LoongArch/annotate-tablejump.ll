@@ -15,8 +15,9 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-JT-NEXT:    ori $a2, $zero, 3
 ; LA32-JT-NEXT:    bltu $a2, $a3, .LBB0_7
 ; LA32-JT-NEXT:  # %bb.1: # %entry
-; LA32-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_0)
-; LA32-JT-NEXT:    addi.w $a4, $a4, %pc_lo12(.LJTI0_0)
+; LA32-JT-NEXT:  .Lpcadd_hi0:
+; LA32-JT-NEXT:    pcaddu12i $a4, %pcadd_hi20(.LJTI0_0)
+; LA32-JT-NEXT:    addi.w $a4, $a4, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-JT-NEXT:    alsl.w $a3, $a3, $a4, 2
 ; LA32-JT-NEXT:    ld.w $a3, $a3, 0
 ; LA32-JT-NEXT:  .Ljrtb_0:
@@ -38,8 +39,9 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA32-JT-NEXT:    addi.w $a3, $a0, -5
 ; LA32-JT-NEXT:    bltu $a2, $a3, .LBB0_9
 ; LA32-JT-NEXT:  # %bb.8: # %exit
-; LA32-JT-NEXT:    pcalau12i $a4, %pc_hi20(.LJTI0_1)
-; LA32-JT-NEXT:    addi.w $a4, $a4, %pc_lo12(.LJTI0_1)
+; LA32-JT-NEXT:  .Lpcadd_hi1:
+; LA32-JT-NEXT:    pcaddu12i $a4, %pcadd_hi20(.LJTI0_1)
+; LA32-JT-NEXT:    addi.w $a4, $a4, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-JT-NEXT:    alsl.w $a3, $a3, $a4, 2
 ; LA32-JT-NEXT:    ld.w $a3, $a3, 0
 ; LA32-JT-NEXT:  .Ljrtb_1:

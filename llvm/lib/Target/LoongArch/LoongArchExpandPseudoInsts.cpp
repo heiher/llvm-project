@@ -57,11 +57,11 @@ private:
   bool expandMBB(MachineBasicBlock &MBB);
   bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 MachineBasicBlock::iterator &NextMBBI);
-  bool expandPcalau12iInstPair(MachineBasicBlock &MBB,
+  bool expandPcaxxu12iInstPair(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MBBI,
                                MachineBasicBlock::iterator &NextMBBI,
-                               unsigned FlagsHi, unsigned SecondOpcode,
-                               unsigned FlagsLo);
+                               unsigned OpcodeHi, unsigned OpcodeLo,
+                               unsigned FlagsHi, unsigned FlagsLo);
   bool expandLargeAddressLoad(MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
                               MachineBasicBlock::iterator &NextMBBI,
@@ -177,10 +177,10 @@ bool LoongArchPreRAExpandPseudo::expandMI(
   return false;
 }
 
-bool LoongArchPreRAExpandPseudo::expandPcalau12iInstPair(
+bool LoongArchPreRAExpandPseudo::expandPcaxxu12iInstPair(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned FlagsHi,
-    unsigned SecondOpcode, unsigned FlagsLo) {
+    MachineBasicBlock::iterator &NextMBBI, unsigned OpcodeHi, unsigned OpcodeLo,
+    unsigned FlagsHi, unsigned FlagsLo) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
@@ -193,13 +193,24 @@ bool LoongArchPreRAExpandPseudo::expandPcalau12iInstPair(
       MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   MachineOperand &Symbol = MI.getOperand(1);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), ScratchReg)
-      .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsHi, EnableRelax));
+  MachineInstr *FirstMI =
+      BuildMI(MBB, MBBI, DL, TII->get(OpcodeHi), ScratchReg)
+          .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsHi, EnableRelax));
 
-  MachineInstr *SecondMI =
-      BuildMI(MBB, MBBI, DL, TII->get(SecondOpcode), DestReg)
-          .addReg(ScratchReg)
-          .addDisp(Symbol, 0, LoongArchII::encodeFlags(FlagsLo, EnableRelax));
+  MachineInstr *SecondMI = nullptr;
+  FlagsLo = LoongArchII::encodeFlags(FlagsLo, EnableRelax);
+
+  if (OpcodeHi == LoongArch::PCADDU12I) {
+    MCSymbol *PCAddSymbol = MF->getContext().createNamedTempSymbol("pcadd_hi");
+    FirstMI->setPreInstrSymbol(*MF, PCAddSymbol);
+    SecondMI = BuildMI(MBB, MBBI, DL, TII->get(OpcodeLo), DestReg)
+                   .addReg(ScratchReg)
+                   .addSym(PCAddSymbol, FlagsLo);
+  } else {
+    SecondMI = BuildMI(MBB, MBBI, DL, TII->get(OpcodeLo), DestReg)
+                   .addReg(ScratchReg)
+                   .addDisp(Symbol, 0, FlagsLo);
+  }
 
   if (MI.hasOneMemOperand())
     SecondMI->addMemOperand(*MF, *MI.memoperands_begin());
@@ -321,13 +332,24 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressPcrel(
                                   LoongArchII::MO_PCREL_LO);
 
   // Code Sequence:
-  // pcalau12i $rd, %pc_hi20(sym)
-  // addi.w/d $rd, $rd, %pc_lo12(sym)
+  // for 32bit:
+  //   .Lpcadd_hi:
+  //     pcaddu12i $rd, %pcadd_hi20(sym)
+  //     addi.w    $rd, $rd, %pcadd_lo12(.Lpcadd_hi)
+  // for 64bit:
+  //   pcalau12i $rd, %pc_hi20(sym)
+  //   addi.d    $rd, $rd, %pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_PCREL_HI,
-                                 SecondOpcode, LoongArchII::MO_PCREL_LO);
+  unsigned OpcodeHi =
+      STI.is64Bit() ? LoongArch::PCALAU12I : LoongArch::PCADDU12I;
+  unsigned OpcodeLo = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  unsigned FlagsHi =
+      STI.is64Bit() ? LoongArchII::MO_PCREL_HI : LoongArchII::MO_PCADD_HI;
+  unsigned FlagsLo =
+      STI.is64Bit() ? LoongArchII::MO_PCREL_LO : LoongArchII::MO_PCADD_LO;
+  return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
+                                 FlagsHi, FlagsLo);
 }
 
 bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
@@ -340,13 +362,24 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
                                   LoongArchII::MO_GOT_PC_HI);
 
   // Code Sequence:
-  // pcalau12i $rd, %got_pc_hi20(sym)
-  // ld.w/d $rd, $rd, %got_pc_lo12(sym)
+  // for 32bit:
+  //   .Lpcadd_hi:
+  //     pcaddu12i $rd, %pcadd_got_hi20(sym)
+  //     ld.w      $rd, $rd, %pcadd_lo12(.Lpcadd_hi)
+  // for 64bit:
+  //   pcalau12i $rd, %got_pc_hi20(sym)
+  //   ld.d      $rd, $rd, %got_pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
-  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GOT_PC_HI,
-                                 SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+  unsigned OpcodeHi =
+      STI.is64Bit() ? LoongArch::PCALAU12I : LoongArch::PCADDU12I;
+  unsigned OpcodeLo = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+  unsigned FlagsHi =
+      STI.is64Bit() ? LoongArchII::MO_GOT_PC_HI : LoongArchII::MO_PCADD_GOT_HI;
+  unsigned FlagsLo =
+      STI.is64Bit() ? LoongArchII::MO_GOT_PC_LO : LoongArchII::MO_PCADD_LO;
+  return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
+                                 FlagsHi, FlagsLo);
 }
 
 bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
@@ -424,13 +457,24 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSIE(
                                   LoongArchII::MO_IE_PC_LO);
 
   // Code Sequence:
-  // pcalau12i $rd, %ie_pc_hi20(sym)
-  // ld.w/d $rd, $rd, %ie_pc_lo12(sym)
+  // for 32bit:
+  //   .Lpcadd_hi:
+  //     pcaddu12i $rd, %pcadd_ie_hi20(sym)
+  //     ld.w      $rd, $rd, %pcadd_lo12(.Lpcadd_hi)
+  // for 64bit:
+  //   pcalau12i $rd, %ie_pc_hi20(sym)
+  //   ld.d      $rd, $rd, %ie_pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
-  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_IE_PC_HI,
-                                 SecondOpcode, LoongArchII::MO_IE_PC_LO);
+  unsigned OpcodeHi =
+      STI.is64Bit() ? LoongArch::PCALAU12I : LoongArch::PCADDU12I;
+  unsigned OpcodeLo = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+  unsigned FlagsHi =
+      STI.is64Bit() ? LoongArchII::MO_IE_PC_HI : LoongArchII::MO_PCADD_IE_HI;
+  unsigned FlagsLo =
+      STI.is64Bit() ? LoongArchII::MO_IE_PC_LO : LoongArchII::MO_PCADD_LO;
+  return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, OpcodeHi, OpcodeLo,
+                                 FlagsHi, FlagsLo);
 }
 
 bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLD(
@@ -447,9 +491,10 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLD(
   // addi.w/d $rd, $rd, %got_pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_LD_PC_HI,
-                                 SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+  unsigned OpcodeLo = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, LoongArch::PCALAU12I,
+                                 OpcodeLo, LoongArchII::MO_LD_PC_HI,
+                                 LoongArchII::MO_GOT_PC_LO);
 }
 
 bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
@@ -466,9 +511,10 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
   // addi.w/d $rd, $rd, %got_pc_lo12(sym)
   MachineFunction *MF = MBB.getParent();
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
-  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
-  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GD_PC_HI,
-                                 SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+  unsigned OpcodeLo = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  return expandPcaxxu12iInstPair(MBB, MBBI, NextMBBI, LoongArch::PCALAU12I,
+                                 OpcodeLo, LoongArchII::MO_GD_PC_HI,
+                                 LoongArchII::MO_GOT_PC_LO);
 }
 
 bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
@@ -479,6 +525,7 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
   DebugLoc DL = MI.getDebugLoc();
 
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned PCA = STI.is64Bit() ? LoongArch::PCALAU12I : LoongArch::PCADDU12I;
   unsigned ADD = STI.is64Bit() ? LoongArch::ADD_D : LoongArch::ADD_W;
   unsigned ADDI = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
   unsigned LD = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
@@ -489,10 +536,11 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
       MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
   MachineOperand &Symbol = MI.getOperand(Large ? 2 : 1);
 
-  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCALAU12I), Tmp1Reg)
-      .addDisp(Symbol, 0,
-               LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_HI,
-                                        EnableRelax && !Large));
+  MachineInstr *PCAMI =
+      BuildMI(MBB, MBBI, DL, TII->get(PCA), Tmp1Reg)
+          .addDisp(Symbol, 0,
+                   LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_HI,
+                                            EnableRelax && !Large));
 
   if (Large) {
     // Code Sequence:
@@ -527,16 +575,33 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSDesc(
         .addReg(Tmp4Reg);
   } else {
     // Code Sequence:
-    // pcalau12i $a0, %desc_pc_hi20(sym)
-    // addi.w/d  $a0, $a0, %desc_pc_lo12(sym)
-    // ld.w/d    $ra, $a0, %desc_ld(sym)
-    // jirl      $ra, $ra, %desc_call(sym)
-    // add.w/d   $dst, $a0, $tp
-    BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
-        .addReg(Tmp1Reg)
-        .addDisp(
-            Symbol, 0,
-            LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_LO, EnableRelax));
+    //   for 32bit:
+    //     .Lpcadd_hi:
+    //       pcaddu12i $a0, %pcadd_desc_hi20(sym)
+    //       addi.w    $a0, $a0, %pcadd_lo12(.Lpcadd_hi)
+    //       ld.w      $ra, $a0, %desc_ld(sym)
+    //       jirl      $ra, $ra, %desc_call(sym)
+    //       add.w     $dst, $a0, $tp
+    //   for 64bit:
+    //     pcalau12i $a0, %desc_pc_hi20(sym)
+    //     addi.d    $a0, $a0, %desc_pc_lo12(sym)
+    //     ld.d      $ra, $a0, %desc_ld(sym)
+    //     jirl      $ra, $ra, %desc_call(sym)
+    //     add.d     $dst, $a0, $tp
+    if (STI.is64Bit()) {
+      BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
+          .addReg(Tmp1Reg)
+          .addDisp(Symbol, 0,
+                   LoongArchII::encodeFlags(LoongArchII::MO_DESC_PC_LO,
+                                            EnableRelax));
+    } else {
+      MCSymbol *PCASymbol = MF->getContext().createNamedTempSymbol("desc_hi");
+      PCAMI->setPreInstrSymbol(*MF, PCASymbol);
+      BuildMI(MBB, MBBI, DL, TII->get(ADDI), LoongArch::R4)
+          .addReg(Tmp1Reg)
+          .addSym(PCASymbol, LoongArchII::encodeFlags(LoongArchII::MO_PCADD_LO,
+                                                      EnableRelax));
+    }
   }
 
   BuildMI(MBB, MBBI, DL, TII->get(LD), LoongArch::R1)
@@ -645,8 +710,8 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
     }
   };
 
-  // FindDepth = 3, probably sufficient.
-  FindJTIMI(&*MBBI, /*FindDepth=*/3);
+  // FindDepth = 4, probably sufficient.
+  FindJTIMI(&*MBBI, /*FindDepth=*/4);
 }
 
 class LoongArchExpandPseudo : public MachineFunctionPass {
@@ -776,6 +841,7 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
   DebugLoc DL = MI.getDebugLoc();
   const MachineOperand &Func = MI.getOperand(0);
   MachineInstrBuilder CALL;
+  bool IsArch64Bit;
   unsigned Opcode;
 
   switch (MF->getTarget().getCodeModel()) {
@@ -783,25 +849,40 @@ bool LoongArchExpandPseudo::expandFunctionCALL(
     report_fatal_error("Unexpected code model");
     break;
   case CodeModel::Medium: {
-    // CALL:
-    // pcaddu18i $ra, %call36(func)
-    // jirl      $ra, $ra, 0
-    // TAIL:
-    // pcaddu18i $t8, %call36(func)
-    // jirl      $r0, $t8, 0
+    // LoongArch32:
+    //   CALL:
+    //   pcaddu12i $ra, %call30(func)
+    //   jirl      $ra, $ra, 0
+    //   TAIL:
+    //   pcaddu12i $t8, %call30(func)
+    //   jirl      $r0, $t8, 0
+    // LoongArch64:
+    //   CALL:
+    //   pcaddu18i $ra, %call36(func)
+    //   jirl      $ra, $ra, 0
+    //   TAIL:
+    //   pcaddu18i $t8, %call36(func)
+    //   jirl      $r0, $t8, 0
+    IsArch64Bit = MF->getTarget().getTargetTriple().isArch64Bit();
     Opcode =
         IsTailCall ? LoongArch::PseudoJIRL_TAIL : LoongArch::PseudoJIRL_CALL;
     Register ScratchReg = IsTailCall ? LoongArch::R20 : LoongArch::R1;
-    MachineInstrBuilder MIB =
-        BuildMI(MBB, MBBI, DL, TII->get(LoongArch::PCADDU18I), ScratchReg);
+    MachineInstrBuilder MIB = BuildMI(
+        MBB, MBBI, DL,
+        TII->get(IsArch64Bit ? LoongArch::PCADDU18I : LoongArch::PCADDU12I),
+        ScratchReg);
 
     CALL =
         BuildMI(MBB, MBBI, DL, TII->get(Opcode)).addReg(ScratchReg).addImm(0);
 
     if (Func.isSymbol())
-      MIB.addExternalSymbol(Func.getSymbolName(), LoongArchII::MO_CALL36);
+      MIB.addExternalSymbol(Func.getSymbolName(), IsArch64Bit
+                                                      ? LoongArchII::MO_CALL36
+                                                      : LoongArchII::MO_CALL30);
     else
-      MIB.addDisp(Func, 0, LoongArchII::MO_CALL36);
+      MIB.addDisp(Func, 0,
+                  IsArch64Bit ? LoongArchII::MO_CALL36
+                              : LoongArchII::MO_CALL30);
     break;
   }
   }

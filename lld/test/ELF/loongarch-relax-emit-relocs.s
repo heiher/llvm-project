@@ -1,11 +1,8 @@
 # REQUIRES: loongarch
 ## Test that we can handle --emit-relocs while relaxing.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --mattr=+relax %s -o %t.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --mattr=+relax --defsym ELF64=1 %s -o %t.64.o
-# RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.32.o -o %t.32
 # RUN: ld.lld -Ttext=0x10000 -section-start=.got=0x20000 --emit-relocs %t.64.o -o %t.64
-# RUN: llvm-objdump -dr %t.32 | FileCheck %s --check-prefixes=RELAX,RELAX32
 # RUN: llvm-objdump -dr %t.64 | FileCheck %s --check-prefixes=RELAX,RELAX64
 
 ## -r should keep original relocations.
@@ -56,10 +53,6 @@
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
 # RELAX-NEXT:     R_LARCH_TLS_LE_LO12_R a
 # RELAX-NEXT:     R_LARCH_RELAX *ABS*
-
-# RELAX32-NEXT:  nop
-# RELAX32-NEXT:    R_LARCH_ALIGN *ABS*+0xc
-# RELAX32-NEXT:  ret
 
 # RELAX64-NEXT:  nop
 # RELAX64-NEXT:    R_LARCH_ALIGN *ABS*+0xc
