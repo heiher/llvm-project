@@ -27,7 +27,10 @@ main:
 .L0:
 # Referencing named_data symbol to avoid the following relocations be
 # skipped. This macro instruction will be expand to two instructions
-# (pcalau12i + ld.w/d).
+# 32bit:
+#   (pcaddu12i + ld.w)
+# 64bit:
+#   (pcalau12i + ld.d)
   la.global $t0, named_data
 .L1:
 
