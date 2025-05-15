@@ -723,7 +723,6 @@ static Relocation *getRISCVPCRelHi20(Ctx &ctx, const InputSectionBase *loSec,
 static Relocation *getLoongArchPCAddHi20(Ctx &ctx,
                                          const InputSectionBase *loSec,
                                          const Relocation &loReloc) {
-  uint64_t addend = loReloc.addend;
   Symbol *sym = loReloc.sym;
 
   const Defined *d = cast<Defined>(sym);
@@ -741,15 +740,10 @@ static Relocation *getLoongArchPCAddHi20(Ctx &ctx,
              << sym->getName() << "' in a different section '" << hiSec->name
              << "'";
 
-  if (addend != 0)
-    Warn(ctx) << loSec->getLocation(loReloc.offset)
-              << ": non-zero addend in R_LARCH_PCADD_LO12 relocation to "
-              << hiSec->getObjMsg(d->value) << " is ignored";
-
   // Relocations are sorted by offset, so we can use std::equal_range to do
   // binary search.
   Relocation hiReloc;
-  hiReloc.offset = d->value;
+  hiReloc.offset = d->value + loReloc.addend;
   auto range =
       std::equal_range(hiSec->relocs().begin(), hiSec->relocs().end(), hiReloc,
                        [](const Relocation &lhs, const Relocation &rhs) {
@@ -942,7 +936,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   }
   case RE_LOONGARCH_PC_INDIRECT: {
     if (const Relocation *hiRel = getLoongArchPCAddHi20(ctx, this, r))
-      return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx));
+      return getRelocTargetVA(ctx, *hiRel, r.sym->getVA(ctx, a));
     return 0;
   }
   case RE_LOONGARCH_PAGE_PC:

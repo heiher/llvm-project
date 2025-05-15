@@ -62,7 +62,7 @@ private:
 
     const Symbol &Sym = E.getTarget();
     const Block &B = Sym.getBlock();
-    orc::ExecutorAddrDiff Offset = Sym.getOffset();
+    orc::ExecutorAddrDiff Offset = Sym.getOffset() + E.getAddend();
 
     auto It = RelPCAdd20Map.find({&B, Offset});
     if (It != RelPCAdd20Map.end())
@@ -196,8 +196,9 @@ private:
       auto RelPCAdd20 = getLoongArchPCAdd20(E);
       if (!RelPCAdd20)
         return RelPCAdd20.takeError();
-      int64_t Delta = RelPCAdd20->getTarget().getAddress() +
-                      RelPCAdd20->getAddend() - E.getTarget().getAddress();
+      int64_t Delta =
+          (RelPCAdd20->getTarget().getAddress() + RelPCAdd20->getAddend()) -
+          (E.getTarget().getAddress() + E.getAddend());
 
       uint32_t RawInstr = *(ulittle32_t *)FixupPtr;
       uint32_t Imm11_0 = extractBits(Delta, /*Hi=*/11, /*Lo=*/0) << 10;
