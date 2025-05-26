@@ -166,7 +166,9 @@ include "LoongArchInstrInfo.td"
 // LoongArch processors supported.
 //===----------------------------------------------------------------------===//
 
-def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit]>;
+def : ProcessorModel<"generic-la32", NoSchedModel, [Feature32Bit,
+                                                    FeatureUAL,
+                                                    FeatureBasicD]>;
 def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit,
                                                     FeatureUAL,
                                                     FeatureExtLSX]>;

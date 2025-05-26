@@ -32,12 +32,10 @@ static ABI checkABIStandardized(ABI Abi) {
   case ABI_ILP32F:
     ABIName = "ilp32f";
     break;
-  case ABI_ILP32D:
-    ABIName = "ilp32d";
-    break;
   case ABI_LP64F:
     ABIName = "lp64f";
     break;
+  case ABI_ILP32D:
   case ABI_LP64S:
   case ABI_LP64D:
     return Abi;
