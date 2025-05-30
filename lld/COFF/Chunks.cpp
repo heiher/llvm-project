@@ -365,6 +365,36 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
+// Interpret the existing immediate value as a byte offset to the
+// target symbol, then update the instruction with the immediate as
+// the page offset from the current instruction to the target.
+void applyLA64Addr(uint8_t *off, uint64_t s, uint64_t p) {
+  uint32_t orig = read32le(off);
+  uint64_t imm = SignExtend64<20>((orig >> 5) & 0xfffff);
+  s += imm;
+  uint64_t result = (s & ~((uint64_t)0xfff)) - (p & ~((uint64_t)0xfff));
+  if (s & 0x800)
+    result += 0x1000 - 0x1'0000'0000;
+  if (result & 0x8000'0000)
+    result += 0x1'0000'0000;
+
+  uint32_t insMask = ~((uint32_t)0xfffff << 5);
+  uint64_t val = SignExtend64(result, 64);
+  uint64_t valMask = ((uint64_t)1 << 20) - 1;
+  val = val >> 12;
+  val = val & valMask;
+  val <<= 5;
+  write32le(off, (orig & insMask) | val);
+}
+
+// Update the immediate field in a LoongArch64 addi.d instruction.
+void applyLA64Imm(uint8_t *off, uint64_t imm) {
+  uint32_t orig = read32le(off);
+  imm += (orig >> 10) & 0xfff;
+  orig &= ~(0xFFF << 10);
+  write32le(off, orig | ((imm & 0xFFF) << 10));
+}
+
 void SectionChunk::applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os,
                                 uint64_t s, uint64_t p,
                                 uint64_t imageBase) const {
@@ -386,6 +416,12 @@ void SectionChunk::applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os,
     break;
   case IMAGE_REL_LARCH_REL32:
     add32(off, s - p - 4);
+    break;
+  case IMAGE_REL_LARCH_PCALA_HI20:
+    applyLA64Addr(off, s, p);
+    break;
+  case IMAGE_REL_LARCH_PCALA_LO12:
+    applyLA64Imm(off, s & 0xfff);
     break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
