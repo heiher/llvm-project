@@ -388,11 +388,47 @@ void applyLA64Addr(uint8_t *off, uint64_t s, uint64_t p) {
 }
 
 // Update the immediate field in a LoongArch64 addi.d instruction.
-void applyLA64Imm(uint8_t *off, uint64_t imm) {
+static void applyLA64Imm(uint8_t *off, uint64_t imm) {
   uint32_t orig = read32le(off);
   imm += (orig >> 10) & 0xfff;
   orig &= ~(0xFFF << 10);
   write32le(off, orig | ((imm & 0xFFF) << 10));
+}
+
+static void applyLA64Branch26(uint8_t *off, int64_t v) {
+  if (!isInt<28>(v))
+    error("la64 branch26 relocation out of range");
+
+  if (v % 4)
+    error("la64 branch26 fixup value must be 4-byte aligned");
+
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x3ffffff;
+  write32le(off, (orig & ~mask) | ((v & 0x3fffc) << 8) | ((v >> 18) & 0x3ff));
+}
+
+static void applyLA64AbsHi20(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x1ffffe0;
+  write32le(off, (orig & ~mask) | (((v >> 12) & 0xfffff) << 5));
+}
+
+static void applyLA64AbsLo12(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0xffc00;
+  write32le(off, (orig & ~mask) | ((v & 0xfff) << 10));
+}
+
+static void applyLA64Abs64Lo20(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x1ffffe0;
+  write32le(off, (orig & ~mask) | (((v >> 32) & 0xfffff) << 5));
+}
+
+static void applyLA64Abs64Hi12(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0xffc00;
+  write32le(off, (orig & ~mask) | (((v >> 52) & 0xfff) << 10));
 }
 
 void SectionChunk::applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os,
@@ -422,6 +458,21 @@ void SectionChunk::applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os,
     break;
   case IMAGE_REL_LARCH_PCALA_LO12:
     applyLA64Imm(off, s & 0xfff);
+    break;
+  case IMAGE_REL_LARCH_BRANCH26:
+    applyLA64Branch26(off, s - p);
+    break;
+  case IMAGE_REL_LARCH_ADDR_HI20:
+    applyLA64AbsHi20(off, s);
+    break;
+  case IMAGE_REL_LARCH_ADDR_LO12:
+    applyLA64AbsLo12(off, s);
+    break;
+  case IMAGE_REL_LARCH_ADDR64_LO20:
+    applyLA64Abs64Lo20(off, s);
+    break;
+  case IMAGE_REL_LARCH_ADDR64_HI12:
+    applyLA64Abs64Hi12(off, s);
     break;
   default:
     error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
