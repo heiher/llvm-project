@@ -8,6 +8,8 @@
 ; RUN: llvm-readobj %t.a | FileCheck --check-prefix=ARM64 %s
 ; RUN: llvm-dlltool -m r4000 -d %s -l %t.a
 ; RUN: llvm-readobj %t.a | FileCheck --check-prefix=MIPS %s
+; RUN: llvm-dlltool -m loongarch64 -d %s -l %t.a
+; RUN: llvm-readobj %t.a | FileCheck --check-prefix=LOONGARCH64 %s
 
 LIBRARY test.dll
 EXPORTS
@@ -18,3 +20,4 @@ TestFunction
 ; ARM: Format: COFF-ARM{{$}}
 ; ARM64: Format: COFF-ARM64
 ; MIPS: Format: COFF-MIPS
+; LOONGARCH64: Format: COFF-loongarch64
