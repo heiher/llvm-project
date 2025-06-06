@@ -20,6 +20,10 @@
 
 using namespace llvm;
 
+const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+};
+
 const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr, uint16_t S,
                                                MCContext &Ctx, bool Hint) {
   return new (Ctx) LoongArchMCExpr(Expr, S, Hint);
@@ -241,4 +245,5 @@ LoongArchMCAsmInfoMicrosoftCOFF::LoongArchMCAsmInfoMicrosoftCOFF(
   CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+  initializeAtSpecifiers(COFFAtSpecifiers);
 }
