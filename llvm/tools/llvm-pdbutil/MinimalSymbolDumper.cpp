@@ -285,6 +285,7 @@ static std::string formatMachineType(CPUType Cpu) {
     RETURN_CASE(CPUType, Thumb, "thumb");
     RETURN_CASE(CPUType, ARMNT, "arm nt");
     RETURN_CASE(CPUType, D3D11_Shader, "d3d11 shader");
+    RETURN_CASE(CPUType, LOONGARCH64, "loongarch64");
     RETURN_CASE(CPUType, Unknown, "unknown");
   }
   return formatUnknownEnum(Cpu);
