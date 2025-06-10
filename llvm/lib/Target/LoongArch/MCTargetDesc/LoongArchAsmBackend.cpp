@@ -159,9 +159,28 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
     Ctx.reportError(Fixup.getLoc(), "Invalid uleb128 value!");
 }
 
+static bool shouldForceRelocation(const MCFixup &Fixup) {
+  // The PCALAU12I instruction adds some multiple of 0x1000 to the current PC
+  // & ~0xfff. This means that the required offset to reach a symbol can vary
+  // by up to one step depending on where the PCALAU12I is in memory. For
+  // example:
+  //
+  //     PCALAU12I $t0, %pc_hi20(there)
+  //  there:
+  //
+  // If the PCALAU12I occurs at address 0xffc then "there" will be at 0x1000
+  // and we'll need that as an offset. At any other address "there" will be in
+  // the same page as the PCALAU12I and the instruction should encode 0x0.
+  // Assuming the section isn't 0x1000-aligned, we therefore need to delegate
+  // this decision to the linker -- a relocation!
+  return Fixup.getKind() == LoongArch::fixup_loongarch_pcala_hi20;
+}
+
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
                                      const MCValue &Target, uint8_t *Data,
                                      uint64_t Value, bool IsResolved) {
+  if (IsResolved && shouldForceRelocation(Fixup))
+    IsResolved = false;
   IsResolved = addReloc(F, Fixup, Target, Value, IsResolved);
   if (!Value)
     return; // Doesn't change encoding.
