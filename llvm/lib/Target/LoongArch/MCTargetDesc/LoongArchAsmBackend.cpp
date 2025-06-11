@@ -102,6 +102,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_4:
   case FK_Data_8:
   case FK_Data_leb128:
+  case FK_SecRel_2:
+  case FK_SecRel_4:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
