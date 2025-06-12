@@ -391,8 +391,9 @@ void applyLA64Addr(uint8_t *off, uint64_t s, uint64_t p) {
 static void applyLA64Imm(uint8_t *off, uint64_t imm) {
   uint32_t orig = read32le(off);
   imm += (orig >> 10) & 0xfff;
-  orig &= ~(0xFFF << 10);
-  write32le(off, orig | ((imm & 0xFFF) << 10));
+  orig &= ~(0xfff << 10);
+  imm &= 0xfff;
+  write32le(off, orig | ((imm & 0xfff) << 10));
 }
 
 static void applyLA64Branch26(uint8_t *off, int64_t v) {
