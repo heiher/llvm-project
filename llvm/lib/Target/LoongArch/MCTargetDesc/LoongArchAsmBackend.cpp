@@ -143,12 +143,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return Value & 0xfffffULL;
   case LoongArch::fixup_loongarch_pcala_lo12:
     if (!TheTriple.isOSBinFormatCOFF() || IsResolved) {
-      Ctx.reportError(Fixup.getLoc(),
-                      "pcala_lo12 fixup only support for coff or resolved");
+      Ctx.reportError(
+          Fixup.getLoc(),
+          "pcala_lo12 fixup only support for coff and not resolved");
     }
-    Value &= 0x7ff;
-    if (!isInt<12>(Value))
-      Ctx.reportError(Fixup.getLoc(), "pcala_lo12 fixup value out of range");
+    Value &= 0xfff;
     return Value;
   }
 }
