@@ -374,17 +374,14 @@ void applyLA64Addr(uint8_t *off, uint64_t s, uint64_t p) {
   s += imm;
   uint64_t result = (s & ~((uint64_t)0xfff)) - (p & ~((uint64_t)0xfff));
   if (s & 0x800)
-    result += 0x1000 - 0x1'0000'0000;
-  if (result & 0x8000'0000)
-    result += 0x1'0000'0000;
+    result += 0x1000;
 
   uint32_t insMask = ~((uint32_t)0xfffff << 5);
-  uint64_t val = SignExtend64(result, 64);
   uint64_t valMask = ((uint64_t)1 << 20) - 1;
-  val = val >> 12;
-  val = val & valMask;
-  val <<= 5;
-  write32le(off, (orig & insMask) | val);
+  result >>= 12;
+  result &= valMask;
+  result <<= 5;
+  write32le(off, (orig & insMask) | result);
 }
 
 // Update the immediate field in a LoongArch64 addi.d instruction.
