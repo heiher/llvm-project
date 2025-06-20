@@ -667,7 +667,7 @@ static uint8_t getBaserelType(const coff_relocation &rel,
     return IMAGE_REL_BASED_ABSOLUTE;
   case Triple::loongarch64:
     if (rel.Type == IMAGE_REL_LARCH_ADDR64)
-      return IMAGE_REL_BASED_LOONGARCH64_MARK_LA;
+      return IMAGE_REL_BASED_DIR64;
     return IMAGE_REL_BASED_ABSOLUTE;
   default:
     llvm_unreachable("unknown machine type");
