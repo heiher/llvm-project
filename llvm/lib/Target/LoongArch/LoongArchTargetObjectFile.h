@@ -20,6 +20,9 @@ public:
   const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
 };
 
+/// This implementation is used for LoongArch COFF targets.
+class LoongArchCOFFTargetObjectFile : public TargetLoweringObjectFileCOFF {};
+
 } // end namespace llvm
 
 #endif
