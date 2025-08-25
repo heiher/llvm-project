@@ -33,8 +33,40 @@ LoongArchWinCOFFObjectWriter::LoongArchWinCOFFObjectWriter(bool Is64Bit)
 unsigned LoongArchWinCOFFObjectWriter::getRelocType(
     MCContext &Ctx, const MCValue &Target, const MCFixup &Fixup,
     bool IsCrossSection, const MCAsmBackend &MAB) const {
-  // UEFI TODO: convert fixup to coff relocation
-  return Fixup.getKind();
+  // Determine the type of the relocation
+  unsigned Kind = Fixup.getKind();
+  if (mc::isRelocation(Kind))
+    return Kind;
+  switch (Kind) {
+  default:
+    Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
+    return COFF::IMAGE_REL_LARCH_ABSOLUTE;
+  case FK_Data_1:
+    Ctx.reportError(Fixup.getLoc(), "1-byte data relocations not supported");
+    return COFF::IMAGE_REL_LARCH_ABSOLUTE;
+  case FK_Data_2:
+    Ctx.reportError(Fixup.getLoc(), "2-byte data relocations not supported");
+    return COFF::IMAGE_REL_LARCH_ABSOLUTE;
+  case FK_Data_4:
+    return COFF::IMAGE_REL_LARCH_ADDR32;
+  case FK_Data_8:
+    return COFF::IMAGE_REL_LARCH_ADDR64;
+  case LoongArch::fixup_loongarch_b16:
+    return COFF::IMAGE_REL_LARCH_BRANCH16;
+  case LoongArch::fixup_loongarch_b21:
+    return COFF::IMAGE_REL_LARCH_BRANCH21;
+  case LoongArch::fixup_loongarch_b26:
+    return COFF::IMAGE_REL_LARCH_BRANCH26;
+  case LoongArch::fixup_loongarch_abs_hi20:
+    return COFF::IMAGE_REL_LARCH_ADDR_HI20;
+  case LoongArch::fixup_loongarch_abs_lo12:
+    return COFF::IMAGE_REL_LARCH_ADDR_LO12;
+  case LoongArch::fixup_loongarch_abs64_lo20:
+    return COFF::IMAGE_REL_LARCH_ADDR64_LO20;
+  case LoongArch::fixup_loongarch_abs64_hi12:
+    return COFF::IMAGE_REL_LARCH_ADDR64_HI12;
+    // TODO: Handle more fixup-kinds.
+  }
 }
 
 std::unique_ptr<MCObjectTargetWriter>
