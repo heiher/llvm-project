@@ -453,6 +453,8 @@ enum RelocationTypesLoongArch : unsigned {
   IMAGE_REL_LARCH_BRANCH21 = 0x000B,
   IMAGE_REL_LARCH_BRANCH16 = 0x000C,
   IMAGE_REL_LARCH_REL32 = 0x000D,
+  IMAGE_REL_LARCH_PCALA_HI20 = 0x000E,
+  IMAGE_REL_LARCH_PCALA_LO12 = 0x000F,
 };
 
 enum DynamicRelocationType : unsigned {

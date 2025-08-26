@@ -34,6 +34,10 @@ enum Fixups {
   fixup_loongarch_abs64_lo20,
   // 12-bit fixup corresponding to %abs_hi12(foo) for instruction lu52i.d.
   fixup_loongarch_abs64_hi12,
+  // 20-bit fixup corresponding to %pc_hi20(foo) for instruction pcalau12i.
+  fixup_loongarch_pcala_hi20,
+  // 12-bit fixup corresponding to %pc_lo12(foo) for instructions like addi.w/d.
+  fixup_loongarch_pcala_lo12,
 
   // Used as a sentinel, must be the last of the fixup which can be handled by
   // LoongArchAsmBackend::applyFixup.

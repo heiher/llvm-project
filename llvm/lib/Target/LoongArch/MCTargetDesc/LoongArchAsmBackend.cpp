@@ -64,6 +64,8 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
       {"fixup_loongarch_abs64_hi12", 10, 12, 0},
+      {"fixup_loongarch_pcala_hi20", 5, 20, 0},
+      {"fixup_loongarch_pcala_lo12", 10, 12, 0},
   };
 
   static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
@@ -89,7 +91,9 @@ static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                 MCContext &Ctx) {
+                                 MCContext &Ctx, const Triple &TheTriple,
+                                 bool IsResolved) {
+  int64_t SignedValue = static_cast<int64_t>(Value);
   switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind");
@@ -128,6 +132,21 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return (Value >> 32) & 0xfffff;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return (Value >> 52) & 0xfff;
+  case LoongArch::fixup_loongarch_pcala_hi20:
+    assert(!IsResolved);
+    if (!TheTriple.isOSBinFormatCOFF())
+      Ctx.reportError(Fixup.getLoc(), "pcala_hi20 fixup only support for coff");
+    if (!isInt<20>(SignedValue))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    return Value & 0xfffffULL;
+  case LoongArch::fixup_loongarch_pcala_lo12:
+    if (!TheTriple.isOSBinFormatCOFF() || IsResolved) {
+      Ctx.reportError(Fixup.getLoc(),
+                      "pcala_lo12 fixup only support for coff or resolved");
+    }
+    if (!isInt<12>(SignedValue))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    return Value &= 0xfff;
   }
 }
 
@@ -158,7 +177,8 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
-  Value = adjustFixupValue(Fixup, Value, Ctx);
+  Value =
+      adjustFixupValue(Fixup, Value, Ctx, STI.getTargetTriple(), IsResolved);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;

@@ -200,6 +200,8 @@ void ScalarEnumerationTraits<COFF::RelocationTypesLoongArch>::enumeration(
   ECase(IMAGE_REL_LARCH_BRANCH21);
   ECase(IMAGE_REL_LARCH_BRANCH16);
   ECase(IMAGE_REL_LARCH_REL32);
+  ECase(IMAGE_REL_LARCH_PCALA_HI20);
+  ECase(IMAGE_REL_LARCH_PCALA_LO12);
 }
 
 void ScalarEnumerationTraits<COFF::RelocationTypesMips>::enumeration(

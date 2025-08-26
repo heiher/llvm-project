@@ -35,8 +35,6 @@ unsigned LoongArchWinCOFFObjectWriter::getRelocType(
     bool IsCrossSection, const MCAsmBackend &MAB) const {
   // Determine the type of the relocation
   unsigned Kind = Fixup.getKind();
-  if (mc::isRelocation(Kind))
-    return Kind;
   switch (Kind) {
   default:
     Ctx.reportError(Fixup.getLoc(), "Unsupported relocation type");
@@ -65,7 +63,10 @@ unsigned LoongArchWinCOFFObjectWriter::getRelocType(
     return COFF::IMAGE_REL_LARCH_ADDR64_LO20;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return COFF::IMAGE_REL_LARCH_ADDR64_HI12;
-    // TODO: Handle more fixup-kinds.
+  case LoongArch::fixup_loongarch_pcala_hi20:
+    return COFF::IMAGE_REL_LARCH_PCALA_HI20;
+  case LoongArch::fixup_loongarch_pcala_lo12:
+    return COFF::IMAGE_REL_LARCH_PCALA_LO12;
   }
 }
 
