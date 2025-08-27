@@ -324,6 +324,17 @@ static std::string formatRegisterId(RegisterId Id, CPUType Cpu) {
     default:
       break;
     }
+  } else if (Cpu == CPUType::LOONGARCH64) {
+    switch (Id) {
+#define CV_REGISTERS_LOONGARCH64
+#define CV_REGISTER(name, val) RETURN_CASE(RegisterId, name, #name)
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_LOONGARCH64
+
+    default:
+      break;
+    }
   } else {
     switch (Id) {
 #define CV_REGISTERS_X86
