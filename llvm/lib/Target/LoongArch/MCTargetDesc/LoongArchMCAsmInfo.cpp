@@ -25,8 +25,9 @@ const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
 };
 
 const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr, uint16_t S,
-                                               MCContext &Ctx, bool Hint) {
-  return new (Ctx) LoongArchMCExpr(Expr, S, Hint);
+                                               MCContext &Ctx, bool Hint,
+                                               SMLoc Loc) {
+  return new (Ctx) LoongArchMCExpr(Expr, S, Hint, Loc);
 }
 
 static StringRef getLoongArchSpecifierName(uint16_t S) {

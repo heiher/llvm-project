@@ -29,12 +29,14 @@ public:
 private:
   const bool RelaxHint;
 
-  explicit LoongArchMCExpr(const MCExpr *Expr, Specifier S, bool Hint)
-      : MCSpecifierExpr(Expr, S), RelaxHint(Hint) {}
+  explicit LoongArchMCExpr(const MCExpr *Expr, Specifier S, bool Hint,
+                           SMLoc Loc)
+      : MCSpecifierExpr(Expr, S, Loc), RelaxHint(Hint) {}
 
 public:
   static const LoongArchMCExpr *create(const MCExpr *Expr, uint16_t S,
-                                       MCContext &Ctx, bool Hint = false);
+                                       MCContext &Ctx, bool Hint = false,
+                                       SMLoc Loc = SMLoc());
 
   bool getRelaxHint() const { return RelaxHint; }
 };
