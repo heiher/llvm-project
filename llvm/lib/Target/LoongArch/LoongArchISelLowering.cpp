@@ -1040,10 +1040,12 @@ SDValue LoongArchTargetLowering::lowerBITREVERSE(SDValue Op,
   SmallVector<SDValue, 8> Ops;
   for (unsigned int i = 0; i < NewEltNum; i++) {
     SDValue Op = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64, NewSrc,
-                             DAG.getConstant(i, DL, MVT::i64));
+                             DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     unsigned RevOp = (ResTy == MVT::v16i8 || ResTy == MVT::v32i8)
                          ? (unsigned)LoongArchISD::BITREV_8B
                          : (unsigned)ISD::BITREVERSE;
+    if (!Subtarget.is64Bit() && RevOp == LoongArchISD::BITREV_8B)
+      return SDValue();
     Ops.push_back(DAG.getNode(RevOp, DL, MVT::i64, Op));
   }
   SDValue Res =
@@ -1523,9 +1525,8 @@ lowerVECTOR_SHUFFLE_VREPLVEI(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 
   assert(SplatIndex < (int)Mask.size() && "Out of bounds mask index");
   if (fitsRegularPattern<int>(Mask.begin(), 1, Mask.end(), SplatIndex, 0)) {
-    APInt Imm(64, SplatIndex);
     return DAG.getNode(LoongArchISD::VREPLVEI, DL, VT, V1,
-                       DAG.getConstant(Imm, DL, Subtarget.getGRLenVT()));
+                       DAG.getConstant(SplatIndex, DL, Subtarget.getGRLenVT()));
   }
 
   return SDValue();
@@ -1583,7 +1584,7 @@ lowerVECTOR_SHUFFLE_VSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   }
 
   // Calculate the immediate. Replace any remaining undefs with zero
-  APInt Imm(64, 0);
+  int Imm = 0;
   for (int i = SubVecSize - 1; i >= 0; --i) {
     int M = SubMask[i];
 
@@ -1858,11 +1859,12 @@ static SDValue lowerVECTOR_SHUFFLE_VPICKOD(const SDLoc &DL, ArrayRef<int> Mask,
 /// adding it as an operand to the resulting VSHUF.
 static SDValue lowerVECTOR_SHUFFLE_VSHUF(const SDLoc &DL, ArrayRef<int> Mask,
                                          MVT VT, SDValue V1, SDValue V2,
-                                         SelectionDAG &DAG) {
+                                         SelectionDAG &DAG,
+                                         const LoongArchSubtarget &Subtarget) {
 
   SmallVector<SDValue, 16> Ops;
   for (auto M : Mask)
-    Ops.push_back(DAG.getConstant(M, DL, MVT::i64));
+    Ops.push_back(DAG.getSignedConstant(M, DL, Subtarget.getGRLenVT()));
 
   EVT MaskVecTy = VT.changeVectorElementTypeToInteger();
   SDValue MaskVec = DAG.getBuildVector(MaskVecTy, DL, Ops);
@@ -1942,7 +1944,8 @@ static SDValue lower128BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     return Result;
   if (SDValue NewShuffle = widenShuffleMask(DL, Mask, VT, V1, V2, DAG))
     return NewShuffle;
-  if ((Result = lowerVECTOR_SHUFFLE_VSHUF(DL, Mask, VT, V1, V2, DAG)))
+  if ((Result =
+           lowerVECTOR_SHUFFLE_VSHUF(DL, Mask, VT, V1, V2, DAG, Subtarget)))
     return Result;
   return SDValue();
 }
@@ -2001,7 +2004,8 @@ lowerVECTOR_SHUFFLE_XVSHUF4I(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
 /// Lower VECTOR_SHUFFLE into XVPERM (if possible).
 static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
                                           MVT VT, SDValue V1, SDValue V2,
-                                          SelectionDAG &DAG) {
+                                          SelectionDAG &DAG,
+                                          const LoongArchSubtarget &Subtarget) {
   // LoongArch LASX only have XVPERM_W.
   if (Mask.size() != 8 || (VT != MVT::v8i32 && VT != MVT::v8f32))
     return SDValue();
@@ -2032,9 +2036,10 @@ static SDValue lowerVECTOR_SHUFFLE_XVPERM(const SDLoc &DL, ArrayRef<int> Mask,
     return SDValue();
 
   SmallVector<SDValue, 8> Masks;
+  MVT GRLenVT = Subtarget.getGRLenVT();
   for (unsigned i = 0; i < NumElts; ++i)
-    Masks.push_back(Mask[i] == -1 ? DAG.getUNDEF(MVT::i64)
-                                  : DAG.getConstant(Mask[i], DL, MVT::i64));
+    Masks.push_back(Mask[i] == -1 ? DAG.getUNDEF(GRLenVT)
+                                  : DAG.getConstant(Mask[i], DL, GRLenVT));
   SDValue MaskVec = DAG.getBuildVector(MVT::v8i32, DL, Masks);
 
   return DAG.getNode(LoongArchISD::XVPERM, DL, VT, V1, MaskVec);
@@ -2446,7 +2451,8 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
     if ((Result = lowerVECTOR_SHUFFLE_XVSHUF4I(DL, NewMask, VT, V1, V2, DAG,
                                                Subtarget)))
       return Result;
-    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, NewMask, VT, V1, V2, DAG)))
+    if ((Result = lowerVECTOR_SHUFFLE_XVPERM(DL, NewMask, VT, V1, V2, DAG,
+                                             Subtarget)))
       return Result;
     if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
                                                              V1, V2, DAG)))
@@ -2868,7 +2874,9 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
     // of MaskVec is Idx, the rest do not matter. ResVec[0] will hold the
     // desired element.
     SDValue IdxCp =
-        DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx);
+        Subtarget.is64Bit()
+            ? DAG.getNode(LoongArchISD::MOVGR2FR_W_LA64, DL, MVT::f32, Idx)
+            : DAG.getBitcast(MVT::f32, Idx);
     SDValue IdxVec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v8f32, IdxCp);
     SDValue MaskVec =
         DAG.getBitcast((VecTy == MVT::v4f64) ? MVT::v4i64 : VecTy, IdxVec);
@@ -2912,12 +2920,33 @@ LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
     return SDValue();
 
   SDValue SplatElt = DAG.getSplatBuildVector(VT, DL, Op1);
-  SDValue SplatIdx = DAG.getSplatBuildVector(IdxVTy, DL, Op2);
-
   SmallVector<SDValue, 32> RawIndices;
-  for (unsigned i = 0; i < NumElts; ++i)
-    RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
-  SDValue Indices = DAG.getBuildVector(IdxVTy, DL, RawIndices);
+  SDValue SplatIdx;
+  SDValue Indices;
+
+  if (!Subtarget.is64Bit() && IdxTy == MVT::i64) {
+    MVT PairVTy = MVT::getVectorVT(MVT::i32, NumElts * 2);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      RawIndices.push_back(Op2);
+      RawIndices.push_back(DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+    }
+    SplatIdx = DAG.getBuildVector(PairVTy, DL, RawIndices);
+    SplatIdx = DAG.getBitcast(IdxVTy, SplatIdx);
+
+    RawIndices.clear();
+    for (unsigned i = 0; i < NumElts; ++i) {
+      RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+      RawIndices.push_back(DAG.getConstant(0, DL, Subtarget.getGRLenVT()));
+    }
+    Indices = DAG.getBuildVector(PairVTy, DL, RawIndices);
+    Indices = DAG.getBitcast(IdxVTy, Indices);
+  } else {
+    SplatIdx = DAG.getSplatBuildVector(IdxVTy, DL, Op2);
+
+    for (unsigned i = 0; i < NumElts; ++i)
+      RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    Indices = DAG.getBuildVector(IdxVTy, DL, RawIndices);
+  }
 
   // insert vec, elt, idx
   // =>
@@ -4939,7 +4968,7 @@ performSETCC_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
   if (Opc == ISD::DELETED_NODE)
     return SDValue();
 
-  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src.getOperand(0));
+  SDValue V = DAG.getNode(Opc, DL, Subtarget.getGRLenVT(), Src.getOperand(0));
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
   V = DAG.getZExtOrTrunc(V, DL, T);
   return DAG.getBitcast(VT, V);
@@ -4952,6 +4981,7 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   SDValue Src = N->getOperand(0);
   EVT SrcVT = Src.getValueType();
+  MVT GRLenVT = Subtarget.getGRLenVT();
 
   if (!DCI.isBeforeLegalizeOps())
     return SDValue();
@@ -5019,11 +5049,11 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
     if (Src.getSimpleValueType() == MVT::v32i8) {
       SDValue Lo, Hi;
       std::tie(Lo, Hi) = DAG.SplitVector(Src, DL);
-      Lo = DAG.getNode(LoongArchISD::VMSKLTZ, DL, MVT::i64, Lo);
-      Hi = DAG.getNode(LoongArchISD::VMSKLTZ, DL, MVT::i64, Hi);
-      Hi = DAG.getNode(ISD::SHL, DL, MVT::i64, Hi,
+      Lo = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Lo);
+      Hi = DAG.getNode(LoongArchISD::VMSKLTZ, DL, GRLenVT, Hi);
+      Hi = DAG.getNode(ISD::SHL, DL, GRLenVT, Hi,
                        DAG.getConstant(16, DL, MVT::i8));
-      V = DAG.getNode(ISD::OR, DL, MVT::i64, Lo, Hi);
+      V = DAG.getNode(ISD::OR, DL, GRLenVT, Lo, Hi);
     } else if (UseLASX) {
       return SDValue();
     }
@@ -5031,7 +5061,7 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
 
   if (!V) {
     Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
-    V = DAG.getNode(Opc, DL, MVT::i64, Src);
+    V = DAG.getNode(Opc, DL, GRLenVT, Src);
   }
 
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
@@ -6177,6 +6207,11 @@ performINTRINSIC_WO_CHAINCombine(SDNode *N, SelectionDAG &DAG,
                        N->getOperand(1),
                        DAG.getNode(ISD::ANY_EXTEND, DL, Subtarget.getGRLenVT(),
                                    N->getOperand(2)));
+  case Intrinsic::loongarch_lsx_bz_v:
+  case Intrinsic::loongarch_lasx_xbz_v:
+    if (!Subtarget.is64Bit())
+      return DAG.getNode(LoongArchISD::VANY_ZERO, DL, N->getValueType(0),
+                         N->getOperand(1));
   }
   return SDValue();
 }
