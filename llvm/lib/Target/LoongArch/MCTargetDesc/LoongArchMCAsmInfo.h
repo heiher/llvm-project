@@ -55,6 +55,8 @@ class LoongArchMCAsmInfoMicrosoftCOFF : public MCAsmInfoMicrosoft {
 
 public:
   explicit LoongArchMCAsmInfoMicrosoftCOFF(const Triple &Triple);
+  void printSpecifierExpr(raw_ostream &OS,
+                          const MCSpecifierExpr &Expr) const override;
 };
 
 namespace LoongArch {

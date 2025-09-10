@@ -248,3 +248,14 @@ LoongArchMCAsmInfoMicrosoftCOFF::LoongArchMCAsmInfoMicrosoftCOFF(
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   initializeAtSpecifiers(COFFAtSpecifiers);
 }
+
+void LoongArchMCAsmInfoMicrosoftCOFF::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != 0 && S != ELF::R_LARCH_B26;
+  if (HasSpecifier)
+    OS << '%' << getLoongArchSpecifierName(S) << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
+}
