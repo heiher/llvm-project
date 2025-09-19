@@ -934,7 +934,9 @@ void WinCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
       (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
        Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
       (COFF::isAnyArm64(Header.Machine) &&
-       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_LOONGARCH64 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_LARCH_REL32))
     FixedValue += 4;
 
   if (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {
