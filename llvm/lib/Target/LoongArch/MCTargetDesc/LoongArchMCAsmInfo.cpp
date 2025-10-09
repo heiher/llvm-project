@@ -243,7 +243,6 @@ LoongArchMCAsmInfoMicrosoftCOFF::LoongArchMCAsmInfoMicrosoftCOFF(
   SupportsDebugInformation = true;
   CodePointerSize = 8;
 
-  CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   initializeAtSpecifiers(COFFAtSpecifiers);
