@@ -135,7 +135,8 @@ void loongarch::getLoongArchTargetFeatures(const Driver &D,
 
   // -mrelax is default, unless -mno-relax is specified.
   // FIXME: Only for loongarch64, loongarch32 has not been fully verified.
-  if (Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax,
+  if (!Triple.isOSBinFormatCOFF() &&
+      Args.hasFlag(options::OPT_mrelax, options::OPT_mno_relax,
                    Triple.isLoongArch64() ? true : false))
     Features.push_back("+relax");
   else if (Args.getLastArg(options::OPT_mno_relax))
