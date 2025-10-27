@@ -76,15 +76,21 @@ static CodeModel::Model
 getEffectiveLoongArchCodeModel(const Triple &TT,
                                std::optional<CodeModel::Model> CM) {
   if (!CM)
-    return TT.isArch64Bit() ? CodeModel::Medium : CodeModel::Small;
+    return (TT.isArch64Bit() && !TT.isOSBinFormatCOFF()) ? CodeModel::Medium
+                                                         : CodeModel::Small;
 
   switch (*CM) {
   case CodeModel::Small:
+    return *CM;
   case CodeModel::Medium:
+    if (TT.isOSBinFormatCOFF())
+      report_fatal_error("COFF does not support medium code models");
     return *CM;
   case CodeModel::Large:
     if (!TT.isArch64Bit())
       report_fatal_error("Large code model requires LA64");
+    else if (TT.isOSBinFormatCOFF())
+      report_fatal_error("COFF does not support large code models");
     return *CM;
   default:
     report_fatal_error(
