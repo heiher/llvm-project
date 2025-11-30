@@ -365,6 +365,119 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
+// Interpret the existing immediate value as a byte offset to the
+// target symbol, then update the instruction with the immediate as
+// the page offset from the current instruction to the target.
+void applyLA64Addr(uint8_t *off, uint64_t s, uint64_t p) {
+  uint32_t orig = read32le(off);
+  uint64_t imm = SignExtend64<20>((orig >> 5) & 0xfffff);
+  s += imm;
+  uint64_t result = (s & ~((uint64_t)0xfff)) - (p & ~((uint64_t)0xfff));
+  if (s & 0x800)
+    result += 0x1000;
+
+  uint32_t insMask = ~((uint32_t)0xfffff << 5);
+  uint64_t valMask = ((uint64_t)1 << 20) - 1;
+  result >>= 12;
+  result &= valMask;
+  result <<= 5;
+  write32le(off, (orig & insMask) | result);
+}
+
+// Update the immediate field in a LoongArch64 addi.d instruction.
+static void applyLA64Imm(uint8_t *off, uint64_t imm) {
+  uint32_t orig = read32le(off);
+  imm += (orig >> 10) & 0xfff;
+  orig &= ~(0xfff << 10);
+  imm &= 0xfff;
+  write32le(off, orig | ((imm & 0xfff) << 10));
+}
+
+static void applyLA64Branch26(uint8_t *off, int64_t v) {
+  if (!isInt<28>(v))
+    error("la64 branch26 relocation out of range");
+
+  if (v % 4)
+    error("la64 branch26 fixup value must be 4-byte aligned");
+
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x3ffffff;
+  write32le(off, (orig & ~mask) | ((v & 0x3fffc) << 8) | ((v >> 18) & 0x3ff));
+}
+
+static void applyLA64AbsHi20(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x1ffffe0;
+  write32le(off, (orig & ~mask) | (((v >> 12) & 0xfffff) << 5));
+}
+
+static void applyLA64AbsLo12(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0xffc00;
+  write32le(off, (orig & ~mask) | ((v & 0xfff) << 10));
+}
+
+static void applyLA64Abs64Lo20(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0x1ffffe0;
+  write32le(off, (orig & ~mask) | (((v >> 32) & 0xfffff) << 5));
+}
+
+static void applyLA64Abs64Hi12(uint8_t *off, int64_t v) {
+  uint32_t orig = read32le(off);
+  uint64_t mask = 0xffc00;
+  write32le(off, (orig & ~mask) | (((v >> 52) & 0xfff) << 10));
+}
+
+void SectionChunk::applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os,
+                                uint64_t s, uint64_t p,
+                                uint64_t imageBase) const {
+  switch (type) {
+  case IMAGE_REL_LARCH_SECTION:
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
+    break;
+  case IMAGE_REL_LARCH_SECREL:
+    applySecRel(this, off, os, s);
+    break;
+  case IMAGE_REL_LARCH_REL32:
+    add32(off, s - p - 4);
+    break;
+  case IMAGE_REL_LARCH_ADDR32:
+    add32(off, s + imageBase);
+    break;
+  case IMAGE_REL_LARCH_ADDR32NB:
+    add32(off, s);
+    break;
+  case IMAGE_REL_LARCH_ADDR64:
+    add64(off, s + imageBase);
+    break;
+  case IMAGE_REL_LARCH_ABS_HI20:
+    applyLA64AbsHi20(off, s);
+    break;
+  case IMAGE_REL_LARCH_ABS_LO12:
+    applyLA64AbsLo12(off, s);
+    break;
+  case IMAGE_REL_LARCH_ABS64_LO20:
+    applyLA64Abs64Lo20(off, s);
+    break;
+  case IMAGE_REL_LARCH_ABS64_HI12:
+    applyLA64Abs64Hi12(off, s);
+    break;
+  case IMAGE_REL_LARCH_B26:
+    applyLA64Branch26(off, s - p);
+    break;
+  case IMAGE_REL_LARCH_PCALA_HI20:
+    applyLA64Addr(off, s, p);
+    break;
+  case IMAGE_REL_LARCH_PCALA_LO12:
+    applyLA64Imm(off, s & 0xfff);
+    break;
+  default:
+    error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
+          toString(file));
+  }
+}
+
 static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
                                              Defined *sym,
                                              const coff_relocation &rel,
@@ -463,6 +576,9 @@ void SectionChunk::applyRelocation(uint8_t *off,
   case Triple::aarch64:
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
     break;
+  case Triple::loongarch64:
+    applyRelLA64(off, rel.Type, os, s, p, imageBase);
+    break;
   default:
     llvm_unreachable("unknown machine type");
   }
@@ -548,6 +664,12 @@ static uint8_t getBaserelType(const coff_relocation &rel,
   case Triple::aarch64:
     if (rel.Type == IMAGE_REL_ARM64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
+    return IMAGE_REL_BASED_ABSOLUTE;
+  case Triple::loongarch64:
+    if (rel.Type == IMAGE_REL_LARCH_ADDR64)
+      return IMAGE_REL_BASED_DIR64;
+    if (rel.Type == IMAGE_REL_LARCH_ABS_HI20)
+      return IMAGE_REL_BASED_LOONGARCH64_MARK_LA;
     return IMAGE_REL_BASED_ABSOLUTE;
   default:
     llvm_unreachable("unknown machine type");
