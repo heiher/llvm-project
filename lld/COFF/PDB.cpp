@@ -1353,6 +1353,8 @@ static codeview::CPUType toCodeViewMachine(COFF::MachineTypes machine) {
     return codeview::CPUType::ARMNT;
   case COFF::IMAGE_FILE_MACHINE_I386:
     return codeview::CPUType::Intel80386;
+  case COFF::IMAGE_FILE_MACHINE_LOONGARCH64:
+    return codeview::CPUType::LOONGARCH64;
   default:
     llvm_unreachable("Unsupported CPU Type");
   }
