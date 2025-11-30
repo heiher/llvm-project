@@ -73,10 +73,22 @@ EnumStrings<uint16_t> getRegisterNames(CPUType Cpu) {
   static constexpr auto RegisterNames_ARM64 =
       BUILD_ENUM_STRINGS(RegisterNameDefs_ARM64);
 
+  constexpr EnumStringDef<uint16_t> RegisterNameDefs_LOONGARCH64[] = {
+#define CV_REGISTERS_LOONGARCH64
+#define CV_REGISTER(name, val) CV_ENUM_CLASS_ENT(RegisterId, name),
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_LOONGARCH64
+  };
+  static constexpr auto RegisterNames_LOONGARCH64 =
+      BUILD_ENUM_STRINGS(RegisterNameDefs_LOONGARCH64);
+
   if (Cpu == CPUType::ARMNT) {
     return RegisterNames_ARM;
   } else if (Cpu == CPUType::ARM64) {
     return RegisterNames_ARM64;
+  } else if (Cpu == CPUType::LOONGARCH64) {
+    return RegisterNames_LOONGARCH64;
   }
   return RegisterNames_X86;
 }
@@ -287,6 +299,7 @@ EnumStrings<unsigned> getCPUTypeNames() {
       CV_ENUM_CLASS_ENT(CPUType, ARM64X),
       CV_ENUM_CLASS_ENT(CPUType, Unknown),
       CV_ENUM_CLASS_ENT(CPUType, D3D11_Shader),
+      CV_ENUM_CLASS_ENT(CPUType, LOONGARCH64),
   };
   static constexpr auto CPUTypeNames = BUILD_ENUM_STRINGS(CPUTypeNameDefs);
   return CPUTypeNames;

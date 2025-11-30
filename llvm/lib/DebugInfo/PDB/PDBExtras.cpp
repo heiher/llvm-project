@@ -147,6 +147,20 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS,
     default:
       break;
     }
+  } else if (CpuReg.Cpu == llvm::codeview::CPUType::LOONGARCH64) {
+    switch (CpuReg.Reg) {
+#define CV_REGISTERS_LOONGARCH64
+#define CV_REGISTER(name, val)                                                 \
+  case codeview::RegisterId::name:                                             \
+    OS << #name;                                                               \
+    return OS;
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_LOONGARCH64
+
+    default:
+      break;
+    }
   } else {
     switch (CpuReg.Reg) {
 #define CV_REGISTERS_X86
