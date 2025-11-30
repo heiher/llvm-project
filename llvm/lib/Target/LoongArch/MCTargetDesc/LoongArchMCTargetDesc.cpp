@@ -16,6 +16,7 @@
 #include "LoongArchMCAsmInfo.h"
 #include "LoongArchWinCOFFStreamer.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -40,6 +41,80 @@
 #include "LoongArchGenSubtargetInfo.inc"
 
 using namespace llvm;
+void LOONGARCH64_MC::initLLVMToCVRegMapping(MCRegisterInfo *MRI) {
+  // Mapping from CodeView to MC register id.
+  static const struct {
+    codeview::RegisterId CVReg;
+    MCPhysReg Reg;
+  } RegMap[] = {
+      {codeview::RegisterId::LOONGARCH64_ZERO, LoongArch::R0},
+      {codeview::RegisterId::LOONGARCH64_RA, LoongArch::R1},
+      {codeview::RegisterId::LOONGARCH64_TP, LoongArch::R2},
+      {codeview::RegisterId::LOONGARCH64_SP, LoongArch::R3},
+      {codeview::RegisterId::LOONGARCH64_A0, LoongArch::R4},
+      {codeview::RegisterId::LOONGARCH64_A1, LoongArch::R5},
+      {codeview::RegisterId::LOONGARCH64_A2, LoongArch::R6},
+      {codeview::RegisterId::LOONGARCH64_A3, LoongArch::R7},
+      {codeview::RegisterId::LOONGARCH64_A4, LoongArch::R8},
+      {codeview::RegisterId::LOONGARCH64_A5, LoongArch::R9},
+      {codeview::RegisterId::LOONGARCH64_A6, LoongArch::R10},
+      {codeview::RegisterId::LOONGARCH64_A7, LoongArch::R11},
+      {codeview::RegisterId::LOONGARCH64_T0, LoongArch::R12},
+      {codeview::RegisterId::LOONGARCH64_T1, LoongArch::R13},
+      {codeview::RegisterId::LOONGARCH64_T2, LoongArch::R14},
+      {codeview::RegisterId::LOONGARCH64_T3, LoongArch::R15},
+      {codeview::RegisterId::LOONGARCH64_T4, LoongArch::R16},
+      {codeview::RegisterId::LOONGARCH64_T5, LoongArch::R17},
+      {codeview::RegisterId::LOONGARCH64_T6, LoongArch::R18},
+      {codeview::RegisterId::LOONGARCH64_T7, LoongArch::R19},
+      {codeview::RegisterId::LOONGARCH64_T8, LoongArch::R20},
+      {codeview::RegisterId::LOONGARCH64_R21, LoongArch::R21},
+      {codeview::RegisterId::LOONGARCH64_FP, LoongArch::R22},
+      {codeview::RegisterId::LOONGARCH64_S0, LoongArch::R23},
+      {codeview::RegisterId::LOONGARCH64_S1, LoongArch::R24},
+      {codeview::RegisterId::LOONGARCH64_S2, LoongArch::R25},
+      {codeview::RegisterId::LOONGARCH64_S3, LoongArch::R26},
+      {codeview::RegisterId::LOONGARCH64_S4, LoongArch::R27},
+      {codeview::RegisterId::LOONGARCH64_S5, LoongArch::R28},
+      {codeview::RegisterId::LOONGARCH64_S6, LoongArch::R29},
+      {codeview::RegisterId::LOONGARCH64_S7, LoongArch::R30},
+      {codeview::RegisterId::LOONGARCH64_S8, LoongArch::R31},
+      {codeview::RegisterId::LOONGARCH64_F0, LoongArch::F0_64},
+      {codeview::RegisterId::LOONGARCH64_F1, LoongArch::F1_64},
+      {codeview::RegisterId::LOONGARCH64_F2, LoongArch::F2_64},
+      {codeview::RegisterId::LOONGARCH64_F3, LoongArch::F3_64},
+      {codeview::RegisterId::LOONGARCH64_F4, LoongArch::F4_64},
+      {codeview::RegisterId::LOONGARCH64_F5, LoongArch::F5_64},
+      {codeview::RegisterId::LOONGARCH64_F6, LoongArch::F6_64},
+      {codeview::RegisterId::LOONGARCH64_F7, LoongArch::F7_64},
+      {codeview::RegisterId::LOONGARCH64_F8, LoongArch::F8_64},
+      {codeview::RegisterId::LOONGARCH64_F9, LoongArch::F9_64},
+      {codeview::RegisterId::LOONGARCH64_F10, LoongArch::F10_64},
+      {codeview::RegisterId::LOONGARCH64_F11, LoongArch::F11_64},
+      {codeview::RegisterId::LOONGARCH64_F12, LoongArch::F12_64},
+      {codeview::RegisterId::LOONGARCH64_F13, LoongArch::F13_64},
+      {codeview::RegisterId::LOONGARCH64_F14, LoongArch::F14_64},
+      {codeview::RegisterId::LOONGARCH64_F15, LoongArch::F15_64},
+      {codeview::RegisterId::LOONGARCH64_F16, LoongArch::F16_64},
+      {codeview::RegisterId::LOONGARCH64_F17, LoongArch::F17_64},
+      {codeview::RegisterId::LOONGARCH64_F18, LoongArch::F18_64},
+      {codeview::RegisterId::LOONGARCH64_F19, LoongArch::F19_64},
+      {codeview::RegisterId::LOONGARCH64_F20, LoongArch::F20_64},
+      {codeview::RegisterId::LOONGARCH64_F21, LoongArch::F21_64},
+      {codeview::RegisterId::LOONGARCH64_F22, LoongArch::F22_64},
+      {codeview::RegisterId::LOONGARCH64_F23, LoongArch::F23_64},
+      {codeview::RegisterId::LOONGARCH64_F24, LoongArch::F24_64},
+      {codeview::RegisterId::LOONGARCH64_F25, LoongArch::F25_64},
+      {codeview::RegisterId::LOONGARCH64_F26, LoongArch::F26_64},
+      {codeview::RegisterId::LOONGARCH64_F27, LoongArch::F27_64},
+      {codeview::RegisterId::LOONGARCH64_F28, LoongArch::F28_64},
+      {codeview::RegisterId::LOONGARCH64_F29, LoongArch::F29_64},
+      {codeview::RegisterId::LOONGARCH64_F30, LoongArch::F30_64},
+      {codeview::RegisterId::LOONGARCH64_F31, LoongArch::F31_64},
+  };
+  for (const auto &I : RegMap)
+    MRI->mapLLVMRegToCVReg(I.Reg, static_cast<int>(I.CVReg));
+}
 
 static MCRegisterInfo *createLoongArchMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
