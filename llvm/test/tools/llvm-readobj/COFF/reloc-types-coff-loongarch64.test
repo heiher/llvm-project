@@ -1,0 +1,99 @@
+## Test that llvm-readobj/llvm-readelf shows proper relocation type
+## names and values for coff-loongarch64 target.
+
+# RUN: yaml2obj %s -o %t-coff-loongarch64.o
+# RUN: llvm-readobj -r --expand-relocs %t-coff-loongarch64.o | FileCheck %s
+
+# CHECK: Type: IMAGE_REL_LARCH_ABSOLUTE (0)
+# CHECK: Type: IMAGE_REL_LARCH_SECTION (1)
+# CHECK: Type: IMAGE_REL_LARCH_SECREL (2)
+# CHECK: Type: IMAGE_REL_LARCH_REL32 (3)
+# CHECK: Type: IMAGE_REL_LARCH_ADDR32 (4)
+# CHECK: Type: IMAGE_REL_LARCH_ADDR32NB (5)
+# CHECK: Type: IMAGE_REL_LARCH_ADDR64 (6)
+# CHECK: Type: IMAGE_REL_LARCH_ABS_HI20 (7)
+# CHECK: Type: IMAGE_REL_LARCH_ABS_LO12 (8)
+# CHECK: Type: IMAGE_REL_LARCH_ABS64_LO20 (9)
+# CHECK: Type: IMAGE_REL_LARCH_ABS64_HI12 (10)
+# CHECK: Type: IMAGE_REL_LARCH_B16 (11)
+# CHECK: Type: IMAGE_REL_LARCH_B21 (12)
+# CHECK: Type: IMAGE_REL_LARCH_B26 (13)
+# CHECK: Type: IMAGE_REL_LARCH_CALL30 (14)
+# CHECK: Type: IMAGE_REL_LARCH_CALL36 (15)
+# CHECK: Type: IMAGE_REL_LARCH_PCREL20_S2 (16)
+# CHECK: Type: IMAGE_REL_LARCH_PCADD_HI20 (17)
+# CHECK: Type: IMAGE_REL_LARCH_PCADD_LO12 (18)
+# CHECK: Type: IMAGE_REL_LARCH_PCALA_HI20 (19)
+# CHECK: Type: IMAGE_REL_LARCH_PCALA_LO12 (20)
+# CHECK: Type: IMAGE_REL_LARCH_PCALA64_LO20 (21)
+# CHECK: Type: IMAGE_REL_LARCH_PCALA64_HI12 (22)
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_LOONGARCH64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     00
+    Relocations:
+      - VirtualAddress:  0x1000
+        Type:            IMAGE_REL_LARCH_ABSOLUTE
+      - VirtualAddress:  0x1004
+        Type:            IMAGE_REL_LARCH_SECTION
+      - VirtualAddress:  0x1008
+        Type:            IMAGE_REL_LARCH_SECREL
+      - VirtualAddress:  0x100C
+        Type:            IMAGE_REL_LARCH_REL32
+      - VirtualAddress:  0x1010
+        Type:            IMAGE_REL_LARCH_ADDR32
+      - VirtualAddress:  0x1014
+        Type:            IMAGE_REL_LARCH_ADDR32NB
+      - VirtualAddress:  0x1018
+        Type:            IMAGE_REL_LARCH_ADDR64
+      - VirtualAddress:  0x101C
+        Type:            IMAGE_REL_LARCH_ABS_HI20
+      - VirtualAddress:  0x1020
+        Type:            IMAGE_REL_LARCH_ABS_LO12
+      - VirtualAddress:  0x1024
+        Type:            IMAGE_REL_LARCH_ABS64_LO20
+      - VirtualAddress:  0x1028
+        Type:            IMAGE_REL_LARCH_ABS64_HI12
+      - VirtualAddress:  0x102C
+        Type:            IMAGE_REL_LARCH_B16
+      - VirtualAddress:  0x1030
+        Type:            IMAGE_REL_LARCH_B21
+      - VirtualAddress:  0x1034
+        Type:            IMAGE_REL_LARCH_B26
+      - VirtualAddress:  0x1038
+        Type:            IMAGE_REL_LARCH_CALL30
+      - VirtualAddress:  0x103C
+        Type:            IMAGE_REL_LARCH_CALL36
+      - VirtualAddress:  0x1040
+        Type:            IMAGE_REL_LARCH_PCREL20_S2
+      - VirtualAddress:  0x1044
+        Type:            IMAGE_REL_LARCH_PCADD_HI20
+      - VirtualAddress:  0x1048
+        Type:            IMAGE_REL_LARCH_PCADD_LO12
+      - VirtualAddress:  0x104C
+        Type:            IMAGE_REL_LARCH_PCALA_HI20
+      - VirtualAddress:  0x1050
+        Type:            IMAGE_REL_LARCH_PCALA_LO12
+      - VirtualAddress:  0x1054
+        Type:            IMAGE_REL_LARCH_PCALA64_LO20
+      - VirtualAddress:  0x1058
+        Type:            IMAGE_REL_LARCH_PCALA64_HI12
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          112
+      NumberOfRelocations: 14
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1

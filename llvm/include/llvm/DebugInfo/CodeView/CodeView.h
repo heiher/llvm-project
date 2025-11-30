@@ -138,6 +138,7 @@ enum class CPUType : uint16_t {
   ARM64X = 0xf9,
   Unknown = 0xff,
   D3D11_Shader = 0x100,
+  LOONGARCH64 = 0x110,
 };
 
 /// These values correspond to the CV_CFL_LANG enumeration in the Microsoft

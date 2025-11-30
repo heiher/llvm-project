@@ -32,12 +32,13 @@ class LoongArchAsmBackend : public MCAsmBackend {
 
 protected:
   const MCSubtargetInfo &STI;
+  const Triple TheTriple;
   const MCTargetOptions &TargetOptions;
   bool Is64Bit;
 
 public:
-  LoongArchAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
-                      const MCTargetOptions &Options);
+  LoongArchAsmBackend(const MCSubtargetInfo &STI, const Triple &TT,
+                      bool Is64Bit, const MCTargetOptions &Options);
 
   bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);

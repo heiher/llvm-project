@@ -180,6 +180,10 @@ struct ScalarEnumerationTraits<COFF::RelocationTypeAMD64> {
   LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypeAMD64 &Value);
 };
 
+template <> struct ScalarEnumerationTraits<COFF::RelocationTypesLoongArch> {
+  static void enumeration(IO &IO, COFF::RelocationTypesLoongArch &Value);
+};
+
 template <> struct ScalarEnumerationTraits<COFF::RelocationTypesMips> {
   LLVM_ABI static void enumeration(IO &IO, COFF::RelocationTypesMips &Value);
 };
