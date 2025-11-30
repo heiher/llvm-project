@@ -1,4 +1,4 @@
-REQUIRES: arm-registered-target, mips-registered-target, x86-registered-target
+REQUIRES: arm-registered-target, loongarch-registered-target, mips-registered-target, x86-registered-target
 
 RUN: rm -rf %t && mkdir -p %t
 
@@ -25,3 +25,9 @@ RUN: llvm-as %S/Inputs/thumb.ll -o %t/thumb.bc
 RUN: llvm-lib %t/thumb.obj %t/thumb.bc /out:%t/thumb.lib
 RUN: llvm-objdump -h %t/thumb.lib | FileCheck %s --check-prefix=THUMB
 THUMB: file format coff-arm
+
+RUN: llc -mtriple=loongarch64-unknown-uefi -filetype=obj -o %t/loongarch64.obj %S/Inputs/loongarch64.ll
+RUN: llvm-as %S/Inputs/loongarch64.ll -o %t/loongarch64.bc
+RUN: llvm-lib %t/loongarch64.obj %t/loongarch64.bc /out:%t/loongarch64.lib
+RUN: llvm-objdump -h %t/loongarch64.lib | FileCheck %s --check-prefix=LOONGARCH64
+LOONGARCH64: file format coff-loongarch64

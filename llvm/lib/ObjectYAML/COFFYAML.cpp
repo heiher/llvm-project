@@ -80,6 +80,7 @@ void ScalarEnumerationTraits<COFF::MachineTypes>::enumeration(
   ECase(IMAGE_FILE_MACHINE_RISCV32);
   ECase(IMAGE_FILE_MACHINE_RISCV64);
   ECase(IMAGE_FILE_MACHINE_RISCV128);
+  ECase(IMAGE_FILE_MACHINE_LOONGARCH64);
   ECase(IMAGE_FILE_MACHINE_SH3);
   ECase(IMAGE_FILE_MACHINE_SH3DSP);
   ECase(IMAGE_FILE_MACHINE_SH4);
@@ -181,6 +182,33 @@ void ScalarEnumerationTraits<COFF::RelocationTypeAMD64>::enumeration(
   ECase(IMAGE_REL_AMD64_SREL32);
   ECase(IMAGE_REL_AMD64_PAIR);
   ECase(IMAGE_REL_AMD64_SSPAN32);
+}
+
+void ScalarEnumerationTraits<COFF::RelocationTypesLoongArch>::enumeration(
+    IO &IO, COFF::RelocationTypesLoongArch &Value) {
+  ECase(IMAGE_REL_LARCH_ABSOLUTE);
+  ECase(IMAGE_REL_LARCH_SECTION);
+  ECase(IMAGE_REL_LARCH_SECREL);
+  ECase(IMAGE_REL_LARCH_REL32);
+  ECase(IMAGE_REL_LARCH_ADDR32);
+  ECase(IMAGE_REL_LARCH_ADDR32NB);
+  ECase(IMAGE_REL_LARCH_ADDR64);
+  ECase(IMAGE_REL_LARCH_ABS_HI20);
+  ECase(IMAGE_REL_LARCH_ABS_LO12);
+  ECase(IMAGE_REL_LARCH_ABS64_LO20);
+  ECase(IMAGE_REL_LARCH_ABS64_HI12);
+  ECase(IMAGE_REL_LARCH_B16);
+  ECase(IMAGE_REL_LARCH_B21);
+  ECase(IMAGE_REL_LARCH_B26);
+  ECase(IMAGE_REL_LARCH_CALL30);
+  ECase(IMAGE_REL_LARCH_CALL36);
+  ECase(IMAGE_REL_LARCH_PCREL20_S2);
+  ECase(IMAGE_REL_LARCH_PCADD_HI20);
+  ECase(IMAGE_REL_LARCH_PCADD_LO12);
+  ECase(IMAGE_REL_LARCH_PCALA_HI20);
+  ECase(IMAGE_REL_LARCH_PCALA_LO12);
+  ECase(IMAGE_REL_LARCH_PCALA64_LO20);
+  ECase(IMAGE_REL_LARCH_PCALA64_HI12);
 }
 
 void ScalarEnumerationTraits<COFF::RelocationTypesMips>::enumeration(
@@ -444,6 +472,10 @@ void MappingTraits<COFFYAML::Relocation>::mapping(IO &IO,
     IO.mapRequired("Type", NT->Type);
   } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_AMD64) {
     MappingNormalization<NType<COFF::RelocationTypeAMD64>, uint16_t> NT(
+        IO, Rel.Type);
+    IO.mapRequired("Type", NT->Type);
+  } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_LOONGARCH64) {
+    MappingNormalization<NType<COFF::RelocationTypesLoongArch>, uint16_t> NT(
         IO, Rel.Type);
     IO.mapRequired("Type", NT->Type);
   } else if (H.Machine == COFF::IMAGE_FILE_MACHINE_R4000) {
