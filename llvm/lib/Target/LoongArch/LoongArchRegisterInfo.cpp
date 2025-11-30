@@ -33,7 +33,9 @@ using namespace llvm;
 LoongArchRegisterInfo::LoongArchRegisterInfo(unsigned HwMode)
     : LoongArchGenRegisterInfo(LoongArch::R1, /*DwarfFlavour*/ 0,
                                /*EHFlavor*/ 0,
-                               /*PC*/ 0, HwMode) {}
+                               /*PC*/ 0, HwMode) {
+  LOONGARCH64_MC::initLLVMToCVRegMapping(this);
+}
 
 const MCPhysReg *
 LoongArchRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
