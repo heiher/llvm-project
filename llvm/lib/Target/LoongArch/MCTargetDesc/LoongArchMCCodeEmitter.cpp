@@ -144,6 +144,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
   unsigned FixupKind = LoongArch::fixup_loongarch_invalid;
   if (Kind == MCExpr::Specifier) {
     const LoongArchMCExpr *LAExpr = cast<LoongArchMCExpr>(Expr);
+    const Triple &TT = STI.getTargetTriple();
     FixupKind = LAExpr->getSpecifier();
     RelaxCandidate = LAExpr->getRelaxHint();
     switch (uint16_t(LAExpr->getSpecifier())) {
@@ -184,6 +185,14 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
     case ELF::R_LARCH_TLS_LE_HI20_R:
     case ELF::R_LARCH_TLS_LE_LO12_R:
       RelaxCandidate = true;
+      break;
+    case ELF::R_LARCH_PCALA_HI20:
+      if (TT.isOSBinFormatCOFF())
+        FixupKind = LoongArch::fixup_loongarch_pcala_hi20;
+      break;
+    case ELF::R_LARCH_PCALA_LO12:
+      if (TT.isOSBinFormatCOFF())
+        FixupKind = LoongArch::fixup_loongarch_pcala_lo12;
       break;
     }
   } else if (Kind == MCExpr::SymbolRef) {

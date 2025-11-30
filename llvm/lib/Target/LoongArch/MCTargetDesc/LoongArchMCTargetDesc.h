@@ -40,6 +40,10 @@ createLoongArchELFObjectWriter(uint8_t OSABI, bool Is64Bit);
 std::unique_ptr<MCObjectTargetWriter>
 createLoongArchWinCOFFObjectWriter(bool Is64Bit);
 
+namespace LOONGARCH64_MC {
+void initLLVMToCVRegMapping(MCRegisterInfo *MRI);
+}
+
 } // end namespace llvm
 
 // Defines symbolic names for LoongArch registers.

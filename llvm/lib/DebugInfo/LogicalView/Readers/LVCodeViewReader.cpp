@@ -82,6 +82,17 @@ std::string LVCodeViewReader::formatRegisterId(RegisterId Register,
     default:
       break;
     }
+  } else if (CPU == CPUType::LOONGARCH64) {
+    switch (Register) {
+#define CV_REGISTERS_LOONGARCH64
+#define CV_REGISTER(name, val) RETURN_CASE(RegisterId, name, #name)
+#include "llvm/DebugInfo/CodeView/CodeViewRegisters.def"
+#undef CV_REGISTER
+#undef CV_REGISTERS_LOONGARCH64
+
+    default:
+      break;
+    }
   } else {
     switch (Register) {
 #define CV_REGISTERS_X86

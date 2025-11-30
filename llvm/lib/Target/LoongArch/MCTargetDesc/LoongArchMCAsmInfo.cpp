@@ -20,9 +20,14 @@
 
 using namespace llvm;
 
+const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+};
+
 const LoongArchMCExpr *LoongArchMCExpr::create(const MCExpr *Expr, uint16_t S,
-                                               MCContext &Ctx, bool Hint) {
-  return new (Ctx) LoongArchMCExpr(Expr, S, Hint);
+                                               MCContext &Ctx, bool Hint,
+                                               SMLoc Loc) {
+  return new (Ctx) LoongArchMCExpr(Expr, S, Hint, Loc);
 }
 
 static StringRef getLoongArchSpecifierName(uint16_t S) {
@@ -240,4 +245,16 @@ LoongArchMCAsmInfoMicrosoftCOFF::LoongArchMCAsmInfoMicrosoftCOFF(
 
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+  initializeAtSpecifiers(COFFAtSpecifiers);
+}
+
+void LoongArchMCAsmInfoMicrosoftCOFF::printSpecifierExpr(
+    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
+  auto S = Expr.getSpecifier();
+  bool HasSpecifier = S != 0 && S != ELF::R_LARCH_B26;
+  if (HasSpecifier)
+    OS << '%' << getLoongArchSpecifierName(S) << '(';
+  printExpr(OS, *Expr.getSubExpr());
+  if (HasSpecifier)
+    OS << ')';
 }

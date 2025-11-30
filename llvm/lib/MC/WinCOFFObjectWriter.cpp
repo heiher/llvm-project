@@ -52,8 +52,6 @@ using llvm::support::endian::write32le;
 
 namespace {
 
-constexpr int OffsetLabelIntervalBits = 20;
-
 using name = SmallString<COFF::NameSize>;
 
 enum AuxiliaryType { ATWeakExternal, ATFile, ATSectionDefinition };
@@ -146,6 +144,7 @@ class llvm::WinCOFFWriter {
 
   bool UseBigObj;
   bool UseOffsetLabels = false;
+  int OffsetLabelIntervalBits = 20;
 
 public:
   enum DwoMode {
@@ -236,7 +235,10 @@ WinCOFFWriter::WinCOFFWriter(WinCOFFObjectWriter &OWriter,
   // limited range for the immediate offset (+/- 1 MB); create extra offset
   // label symbols with regular intervals to allow referencing a
   // non-temporary symbol that is close enough.
-  UseOffsetLabels = COFF::isAnyArm64(Header.Machine);
+  UseOffsetLabels = COFF::isAnyArm64(Header.Machine) ||
+                    (Header.Machine == COFF::IMAGE_FILE_MACHINE_LOONGARCH64);
+  if (Header.Machine == COFF::IMAGE_FILE_MACHINE_LOONGARCH64)
+    OffsetLabelIntervalBits = 19;
 }
 
 COFFSymbol *WinCOFFWriter::createSymbol(StringRef Name) {
@@ -932,7 +934,9 @@ void WinCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
       (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT &&
        Reloc.Data.Type == COFF::IMAGE_REL_ARM_REL32) ||
       (COFF::isAnyArm64(Header.Machine) &&
-       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32))
+       Reloc.Data.Type == COFF::IMAGE_REL_ARM64_REL32) ||
+      (Header.Machine == COFF::IMAGE_FILE_MACHINE_LOONGARCH64 &&
+       Reloc.Data.Type == COFF::IMAGE_REL_LARCH_REL32))
     FixedValue += 4;
 
   if (Header.Machine == COFF::IMAGE_FILE_MACHINE_ARMNT) {

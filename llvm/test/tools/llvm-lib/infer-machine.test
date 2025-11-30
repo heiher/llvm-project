@@ -19,3 +19,9 @@ RUN: llvm-as %S/Inputs/mips.ll -o %t/mips.bc
 RUN: llvm-lib %t/mips.obj %t/mips.bc /out:%t/mips.lib
 RUN: llvm-objdump -h %t/mips.lib | FileCheck %s --check-prefix=MIPS
 MIPS: file format coff-mips
+
+RUN: llc -mtriple=loongarch64-unknown-uefi -filetype=obj -o %t/loongarch64.obj %S/Inputs/loongarch64.ll
+RUN: llvm-as %S/Inputs/loongarch64.ll -o %t/loongarch64.bc
+RUN: llvm-lib %t/loongarch64.obj %t/loongarch64.bc /out:%t/loongarch64.lib
+RUN: llvm-objdump -h %t/loongarch64.lib | FileCheck %s --check-prefix=LOONGARCH64
+LOONGARCH64: file format coff-loongarch64

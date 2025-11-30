@@ -769,7 +769,8 @@ LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   if (getParser().parseParenExpression(SubExpr, E))
     return ParseStatus::Failure;
 
-  const MCExpr *ModExpr = LoongArchMCExpr::create(SubExpr, VK, getContext());
+  const MCExpr *ModExpr =
+      LoongArchMCExpr::create(SubExpr, VK, getContext(), false, S);
   Operands.push_back(LoongArchOperand::createImm(ModExpr, S, E));
   return ParseStatus::Success;
 }

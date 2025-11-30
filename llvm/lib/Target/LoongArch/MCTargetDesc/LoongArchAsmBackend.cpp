@@ -29,10 +29,10 @@
 using namespace llvm;
 
 LoongArchAsmBackend::LoongArchAsmBackend(const MCSubtargetInfo &STI,
-                                         bool Is64Bit,
+                                         const Triple &TT, bool Is64Bit,
                                          const MCTargetOptions &Options)
-    : MCAsmBackend(llvm::endianness::little), STI(STI), TargetOptions(Options),
-      Is64Bit(Is64Bit) {}
+    : MCAsmBackend(llvm::endianness::little), STI(STI), TheTriple(TT),
+      TargetOptions(Options), Is64Bit(Is64Bit) {}
 
 std::optional<MCFixupKind>
 LoongArchAsmBackend::getFixupKind(StringRef Name) const {
@@ -64,6 +64,8 @@ MCFixupKindInfo LoongArchAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_loongarch_abs_lo12", 10, 12, 0},
       {"fixup_loongarch_abs64_lo20", 5, 20, 0},
       {"fixup_loongarch_abs64_hi12", 10, 12, 0},
+      {"fixup_loongarch_pcala_hi20", 5, 20, 0},
+      {"fixup_loongarch_pcala_lo12", 10, 12, 0},
   };
 
   static_assert((std::size(Infos)) == LoongArch::NumTargetFixupKinds,
@@ -89,7 +91,9 @@ static void reportOutOfRangeError(MCContext &Ctx, SMLoc Loc, unsigned N) {
 }
 
 static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
-                                 MCContext &Ctx) {
+                                 MCContext &Ctx, const Triple &TheTriple,
+                                 bool IsResolved) {
+  int64_t SignedValue = static_cast<int64_t>(Value);
   switch (Fixup.getKind()) {
   default:
     llvm_unreachable("Unknown fixup kind");
@@ -98,6 +102,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case FK_Data_4:
   case FK_Data_8:
   case FK_Data_leb128:
+  case FK_SecRel_2:
+  case FK_SecRel_4:
     return Value;
   case LoongArch::fixup_loongarch_b16: {
     if (!isInt<18>(Value))
@@ -128,6 +134,20 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return (Value >> 32) & 0xfffff;
   case LoongArch::fixup_loongarch_abs64_hi12:
     return (Value >> 52) & 0xfff;
+  case LoongArch::fixup_loongarch_pcala_hi20:
+    if (!TheTriple.isOSBinFormatCOFF())
+      Ctx.reportError(Fixup.getLoc(), "pcala_hi20 fixup only support for coff");
+    if (!isInt<20>(SignedValue))
+      Ctx.reportError(Fixup.getLoc(), "pcala_hi20 fixup value out of range");
+    return Value & 0xfffffULL;
+  case LoongArch::fixup_loongarch_pcala_lo12:
+    if (!TheTriple.isOSBinFormatCOFF()) {
+      Ctx.reportError(
+          Fixup.getLoc(),
+          "pcala_lo12 fixup only support for coff");
+    }
+    Value &= 0xfff;
+    return Value;
   }
 }
 
@@ -158,7 +178,7 @@ void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return fixupLeb128(Ctx, Fixup, Data, Value);
 
   // Apply any target-specific value adjustments.
-  Value = adjustFixupValue(Fixup, Value, Ctx);
+  Value = adjustFixupValue(Fixup, Value, Ctx, TheTriple, IsResolved);
 
   // Shift the value into position.
   Value <<= Info.TargetOffset;
@@ -489,9 +509,10 @@ class ELFLoongArchAsmBackend : public LoongArchAsmBackend {
   uint8_t OSABI;
 
 public:
-  ELFLoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
-                         bool Is64Bit, const MCTargetOptions &Options)
-      : LoongArchAsmBackend(STI, Is64Bit, Options), OSABI(OSABI) {}
+  ELFLoongArchAsmBackend(const MCSubtargetInfo &STI, const Triple &TT,
+                         uint8_t OSABI, bool Is64Bit,
+                         const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, TT, Is64Bit, Options), OSABI(OSABI) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -503,9 +524,9 @@ public:
 namespace {
 class COFFLoongArchAsmBackend : public LoongArchAsmBackend {
 public:
-  COFFLoongArchAsmBackend(const MCSubtargetInfo &STI, bool Is64Bit,
-                          const MCTargetOptions &Options)
-      : LoongArchAsmBackend(STI, Is64Bit, Options) {}
+  COFFLoongArchAsmBackend(const MCSubtargetInfo &STI, const Triple &TT,
+                          bool Is64Bit, const MCTargetOptions &Options)
+      : LoongArchAsmBackend(STI, TT, Is64Bit, Options) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
@@ -520,10 +541,10 @@ MCAsmBackend *llvm::createLoongArchAsmBackend(const Target &T,
                                               const MCTargetOptions &Options) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatCOFF())
-    return new COFFLoongArchAsmBackend(STI, TT.isArch64Bit(), Options);
+    return new COFFLoongArchAsmBackend(STI, TT, TT.isArch64Bit(), Options);
 
   assert(TT.isOSBinFormatELF() && "Invalid target");
 
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
-  return new ELFLoongArchAsmBackend(STI, OSABI, TT.isArch64Bit(), Options);
+  return new ELFLoongArchAsmBackend(STI, TT, OSABI, TT.isArch64Bit(), Options);
 }

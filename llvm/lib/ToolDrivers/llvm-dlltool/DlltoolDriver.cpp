@@ -81,6 +81,7 @@ MachineTypes getEmulation(StringRef S) {
       .Case("arm64", IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", IMAGE_FILE_MACHINE_ARM64EC)
       .Case("r4000", IMAGE_FILE_MACHINE_R4000)
+      .Case("loongarch64", IMAGE_FILE_MACHINE_LOONGARCH64)
       .Default(IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -97,6 +98,8 @@ MachineTypes getMachine(Triple T) {
                                 : COFF::IMAGE_FILE_MACHINE_ARM64;
   case Triple::mipsel:
     return COFF::IMAGE_FILE_MACHINE_R4000;
+  case Triple::loongarch64:
+    return COFF::IMAGE_FILE_MACHINE_LOONGARCH64;
   default:
     return COFF::IMAGE_FILE_MACHINE_UNKNOWN;
   }
@@ -315,8 +318,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
        !Args.hasArgNoClaim(OPT_I))) {
     Table.printHelp(outs(), "llvm-dlltool [options] file...", "llvm-dlltool",
                     false);
-    llvm::outs()
-        << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000\n";
+    llvm::outs() << "\nTARGETS: i386, i386:x86-64, arm, arm64, arm64ec, r4000, "
+                    "loongarch64\n";
     return 1;
   }
 

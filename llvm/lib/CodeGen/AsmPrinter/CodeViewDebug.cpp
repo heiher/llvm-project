@@ -125,6 +125,8 @@ static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
     return CPUType::ARM64;
   case Triple::ArchType::mipsel:
     return CPUType::MIPS;
+  case Triple::ArchType::loongarch64:
+    return CPUType::LOONGARCH64;
   case Triple::ArchType::UnknownArch:
     return CPUType::Unknown;
   default:
