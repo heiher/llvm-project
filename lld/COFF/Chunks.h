@@ -285,6 +285,8 @@ public:
                      uint64_t p, uint64_t imageBase) const;
   void applyRelMIPS(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
                     uint64_t p, uint64_t imageBase) const;
+  void applyRelLA64(uint8_t *off, uint16_t type, OutputSection *os, uint64_t s,
+                    uint64_t p, uint64_t imageBase) const;
 
   void getRuntimePseudoRelocs(std::vector<RuntimePseudoReloc> &res);
 
