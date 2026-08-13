@@ -148,7 +148,11 @@
 ; LAXX-NEXT:       Machine Optimization Remark Emitter
 ; LAXX-NEXT:       Shrink Wrapping analysis
 ; LAXX-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
+; LAXX-NEXT:       LoongArch Late Branch Optimisation Pass
 ; LAXX-NEXT:       Machine Late Instructions Cleanup Pass
+; LAXX-NEXT:       MachineDominator Tree Construction
+; LAXX-NEXT:       Machine Natural Loop Construction
+; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Control Flow Optimizer
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Tail Duplication
