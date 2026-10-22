@@ -6,8 +6,8 @@
 ;; Count the bytes equal to '<' into a 64-bit accumulator, as Rust
 ;; `bytes().filter(|c| *c == b'<').count()` does.
 define i64 @count_eq_i64(ptr %p, i64 %n) {
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 2)
-; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 32, interleaved count: 2)
 entry:
   br label %loop
 
@@ -29,8 +29,8 @@ exit:
 
 ;; Count the newlines into a 32-bit accumulator.
 define i32 @count_eq_i32(ptr %p, i64 %n) {
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 2)
-; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 16, interleaved count: 2)
+; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 32, interleaved count: 2)
 entry:
   br label %loop
 
@@ -53,8 +53,8 @@ exit:
 ;; Accumulate 9 products of i16 taps into 64-bit accumulators, as GSM
 ;; Autocorrelation does. Wide VFs need more vector registers than available.
 define void @autocorrelation(ptr %s, ptr %L) {
-; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 2, interleaved count: 2)
-; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 2)
+; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: 1)
+; LASX: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: 1)
 entry:
   %s.start = getelementptr inbounds nuw i8, ptr %s, i64 14
   %first = load i16, ptr %s.start, align 2

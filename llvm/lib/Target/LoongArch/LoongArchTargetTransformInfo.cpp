@@ -47,6 +47,14 @@ TypeSize LoongArchTTIImpl::getRegisterBitWidth(
   llvm_unreachable("Unsupported register kind");
 }
 
+bool LoongArchTTIImpl::shouldMaximizeVectorBandwidth(
+    TargetTransformInfo::RegisterKind K) const {
+  // Consider VFs based on the narrowest type, so loops mixing narrow and wide
+  // types (e.g. counting bytes into a 32/64-bit accumulator) don't end up
+  // processing only a few narrow elements per iteration.
+  return K == TargetTransformInfo::RGK_FixedWidthVector && ST->hasExtLSX();
+}
+
 unsigned LoongArchTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   switch (ClassID) {
   case LoongArchRegisterClass::GPRRC:

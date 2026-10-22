@@ -42,6 +42,8 @@ public:
 
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
+  bool shouldMaximizeVectorBandwidth(
+      TargetTransformInfo::RegisterKind K) const override;
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override;
