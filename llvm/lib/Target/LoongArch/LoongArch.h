@@ -39,6 +39,7 @@ FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
                                      CodeGenOptLevel OptLevel);
 FunctionPass *createLoongArchMemoryBarrierOptPass();
 FunctionPass *createLoongArchMergeBaseOffsetOptPass();
+FunctionPass *createLoongArchRegRegAddrOrderPass();
 FunctionPass *createLoongArchOptWInstrsPass();
 FunctionPass *createLoongArchPreRAExpandPseudoPass();
 FunctionPass *createLoongArchExpandPseudoPass();
@@ -49,6 +50,7 @@ void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchMemoryBarrierOptPass(PassRegistry &);
 void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
+void initializeLoongArchRegRegAddrOrderPass(PassRegistry &);
 void initializeLoongArchOptWInstrsPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);

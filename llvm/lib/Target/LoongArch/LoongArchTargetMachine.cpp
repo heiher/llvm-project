@@ -39,6 +39,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
   initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
+  initializeLoongArchRegRegAddrOrderPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
@@ -63,6 +64,12 @@ static cl::opt<bool>
     EnableMergeBaseOffset("loongarch-enable-merge-offset",
                           cl::desc("Enable the merge base offset pass"),
                           cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnableRegRegAddrOrder(
+    "loongarch-enable-regreg-addr-order",
+    cl::desc("Enable ordering of the address operands of indexed loads and "
+             "stores"),
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableSinkFold("loongarch-enable-sink-fold",
@@ -219,6 +226,9 @@ void LoongArchPassConfig::addPreRegAlloc() {
   addPass(createLoongArchPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
     addPass(createLoongArchMergeBaseOffsetOptPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableRegRegAddrOrder &&
+      TM->getTargetTriple().isLoongArch64())
+    addPass(createLoongArchRegRegAddrOrderPass());
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {

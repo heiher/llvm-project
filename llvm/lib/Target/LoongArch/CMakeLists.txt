@@ -28,6 +28,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchMCInstLower.cpp
   LoongArchMemoryBarrierOpt.cpp
   LoongArchMergeBaseOffset.cpp
+  LoongArchRegRegAddrOrder.cpp
   LoongArchOptWInstrs.cpp
   LoongArchRegisterInfo.cpp
   LoongArchSelectionDAGInfo.cpp

@@ -113,6 +113,8 @@
 ; LA64-NEXT:       LoongArch Optimize W Instructions
 ; LAXX-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
 ; LAXX-NEXT:       LoongArch Merge Base Offset
+; LA64-NEXT:       Machine Trace Metrics
+; LA64-NEXT:       LoongArch RegReg address operand ordering
 ; LAXX-NEXT:       Detect Dead Lanes
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions

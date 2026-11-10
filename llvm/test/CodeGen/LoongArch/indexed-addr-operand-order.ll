@@ -16,7 +16,7 @@ define i64 @ldx_d(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: ldx_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    ldx.d $a0, $a0, $a1
+; CHECK-NEXT:    ldx.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %a, i64 %i
   %v = load i64, ptr %p
@@ -27,7 +27,7 @@ define i64 @ldx_w(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: ldx_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 2
-; CHECK-NEXT:    ldx.w $a0, $a0, $a1
+; CHECK-NEXT:    ldx.w $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %a, i64 %i
   %v = load i32, ptr %p
@@ -39,7 +39,7 @@ define i64 @ldx_wu(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: ldx_wu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 2
-; CHECK-NEXT:    ldx.wu $a0, $a0, $a1
+; CHECK-NEXT:    ldx.wu $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %a, i64 %i
   %v = load i32, ptr %p
@@ -51,7 +51,7 @@ define i64 @ldx_h(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: ldx_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    ldx.h $a0, $a0, $a1
+; CHECK-NEXT:    ldx.h $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i16, ptr %a, i64 %i
   %v = load i16, ptr %p
@@ -63,7 +63,7 @@ define i64 @ldx_hu(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: ldx_hu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    ldx.hu $a0, $a0, $a1
+; CHECK-NEXT:    ldx.hu $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i16, ptr %a, i64 %i
   %v = load i16, ptr %p
@@ -75,7 +75,7 @@ define i64 @ldx_b(ptr %a, i64 %i, i64 %j) nounwind {
 ; CHECK-LABEL: ldx_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a1, $a1, $a2
-; CHECK-NEXT:    ldx.b $a0, $a0, $a1
+; CHECK-NEXT:    ldx.b $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %k = xor i64 %i, %j
   %p = getelementptr i8, ptr %a, i64 %k
@@ -88,7 +88,7 @@ define i64 @ldx_bu(ptr %a, i64 %i, i64 %j) nounwind {
 ; CHECK-LABEL: ldx_bu:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a1, $a1, $a2
-; CHECK-NEXT:    ldx.bu $a0, $a0, $a1
+; CHECK-NEXT:    ldx.bu $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %k = xor i64 %i, %j
   %p = getelementptr i8, ptr %a, i64 %k
@@ -101,7 +101,7 @@ define float @fldx_s(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: fldx_s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 2
-; CHECK-NEXT:    fldx.s $fa0, $a0, $a1
+; CHECK-NEXT:    fldx.s $fa0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr float, ptr %a, i64 %i
   %v = load float, ptr %p
@@ -112,7 +112,7 @@ define double @fldx_d(ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: fldx_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    fldx.d $fa0, $a0, $a1
+; CHECK-NEXT:    fldx.d $fa0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr double, ptr %a, i64 %i
   %v = load double, ptr %p
@@ -123,7 +123,7 @@ define void @vldx(ptr %dst, ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: vldx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a2, $a2, 4
-; CHECK-NEXT:    vldx $vr0, $a1, $a2
+; CHECK-NEXT:    vldx $vr0, $a2, $a1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
   %p = getelementptr <2 x i64>, ptr %a, i64 %i
@@ -136,7 +136,7 @@ define void @xvldx(ptr %dst, ptr %a, i64 %i) nounwind {
 ; CHECK-LABEL: xvldx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a2, $a2, 5
-; CHECK-NEXT:    xvldx $xr0, $a1, $a2
+; CHECK-NEXT:    xvldx $xr0, $a2, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %p = getelementptr <4 x i64>, ptr %a, i64 %i
@@ -149,7 +149,7 @@ define void @stx_d(ptr %a, i64 %i, i64 %v) nounwind {
 ; CHECK-LABEL: stx_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    stx.d $a2, $a0, $a1
+; CHECK-NEXT:    stx.d $a2, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %a, i64 %i
   store i64 %v, ptr %p
@@ -160,7 +160,7 @@ define void @stx_w(ptr %a, i64 %i, i32 %v) nounwind {
 ; CHECK-LABEL: stx_w:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 2
-; CHECK-NEXT:    stx.w $a2, $a0, $a1
+; CHECK-NEXT:    stx.w $a2, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i32, ptr %a, i64 %i
   store i32 %v, ptr %p
@@ -171,7 +171,7 @@ define void @stx_h(ptr %a, i64 %i, i16 %v) nounwind {
 ; CHECK-LABEL: stx_h:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 1
-; CHECK-NEXT:    stx.h $a2, $a0, $a1
+; CHECK-NEXT:    stx.h $a2, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i16, ptr %a, i64 %i
   store i16 %v, ptr %p
@@ -182,7 +182,7 @@ define void @stx_b(ptr %a, i64 %i, i64 %j, i8 %v) nounwind {
 ; CHECK-LABEL: stx_b:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xor $a1, $a1, $a2
-; CHECK-NEXT:    stx.b $a3, $a0, $a1
+; CHECK-NEXT:    stx.b $a3, $a1, $a0
 ; CHECK-NEXT:    ret
   %k = xor i64 %i, %j
   %p = getelementptr i8, ptr %a, i64 %k
@@ -194,7 +194,7 @@ define void @fstx_s(ptr %a, i64 %i, float %v) nounwind {
 ; CHECK-LABEL: fstx_s:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 2
-; CHECK-NEXT:    fstx.s $fa0, $a0, $a1
+; CHECK-NEXT:    fstx.s $fa0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr float, ptr %a, i64 %i
   store float %v, ptr %p
@@ -205,7 +205,7 @@ define void @fstx_d(ptr %a, i64 %i, double %v) nounwind {
 ; CHECK-LABEL: fstx_d:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    fstx.d $fa0, $a0, $a1
+; CHECK-NEXT:    fstx.d $fa0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr double, ptr %a, i64 %i
   store double %v, ptr %p
@@ -216,7 +216,7 @@ define void @vstx(ptr %a, i64 %i, <2 x i64> %v) nounwind {
 ; CHECK-LABEL: vstx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 4
-; CHECK-NEXT:    vstx $vr0, $a0, $a1
+; CHECK-NEXT:    vstx $vr0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr <2 x i64>, ptr %a, i64 %i
   store <2 x i64> %v, ptr %p
@@ -227,7 +227,7 @@ define void @xvstx(ptr %a, i64 %i, <4 x i64> %v) nounwind {
 ; CHECK-LABEL: xvstx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 5
-; CHECK-NEXT:    xvstx $xr0, $a0, $a1
+; CHECK-NEXT:    xvstx $xr0, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr <4 x i64>, ptr %a, i64 %i
   store <4 x i64> %v, ptr %p
@@ -240,9 +240,9 @@ define i64 @shared_index(ptr %a, ptr %b, ptr %c, i64 %i) nounwind {
 ; CHECK-LABEL: shared_index:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a3, $a3, 3
-; CHECK-NEXT:    ldx.d $a0, $a0, $a3
-; CHECK-NEXT:    ldx.d $a1, $a1, $a3
-; CHECK-NEXT:    ldx.d $a2, $a2, $a3
+; CHECK-NEXT:    ldx.d $a0, $a3, $a0
+; CHECK-NEXT:    ldx.d $a1, $a3, $a1
+; CHECK-NEXT:    ldx.d $a2, $a3, $a2
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    add.d $a0, $a0, $a2
 ; CHECK-NEXT:    ret
@@ -261,9 +261,9 @@ define void @ldx_stx_update(ptr %a, i64 %i, i64 %x) nounwind {
 ; CHECK-LABEL: ldx_stx_update:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slli.d $a1, $a1, 3
-; CHECK-NEXT:    ldx.d $a3, $a0, $a1
+; CHECK-NEXT:    ldx.d $a3, $a1, $a0
 ; CHECK-NEXT:    add.d $a2, $a3, $a2
-; CHECK-NEXT:    stx.d $a2, $a0, $a1
+; CHECK-NEXT:    stx.d $a2, $a1, $a0
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr %a, i64 %i
   %v = load i64, ptr %p
@@ -309,7 +309,7 @@ define i64 @deeper_index(ptr %a, i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-NEXT:    andi $a1, $a1, 4088
 ; CHECK-NEXT:    add.d $a0, $a0, $a2
 ; CHECK-NEXT:    bstrins.d $a0, $zero, 5, 0
-; CHECK-NEXT:    ldx.d $a0, $a0, $a1
+; CHECK-NEXT:    ldx.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %i1 = xor i64 %x, %y
   %i2 = add i64 %i1, %z
@@ -389,7 +389,7 @@ define i64 @loaded_index(ptr %a, ptr %pi) nounwind {
 ; CHECK-LABEL: loaded_index:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld.d $a1, $a1, 0
-; CHECK-NEXT:    ldx.d $a0, $a0, $a1
+; CHECK-NEXT:    ldx.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %i = load i64, ptr %pi
   %p = getelementptr i8, ptr %a, i64 %i
@@ -449,7 +449,7 @@ define i64 @got_base(i64 %i) nounwind {
 ; CHECK-NEXT:    pcalau12i $a1, %got_pc_hi20(g)
 ; CHECK-NEXT:    ld.d $a1, $a1, %got_pc_lo12(g)
 ; CHECK-NEXT:    slli.d $a0, $a0, 3
-; CHECK-NEXT:    ldx.d $a0, $a1, $a0
+; CHECK-NEXT:    ldx.d $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr @g, i64 %i
   %v = load i64, ptr %p
@@ -462,7 +462,7 @@ define i64 @pcrel_base(i64 %i) nounwind {
 ; CHECK-NEXT:    slli.d $a0, $a0, 3
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(l)
 ; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(l)
-; CHECK-NEXT:    ldx.d $a0, $a1, $a0
+; CHECK-NEXT:    ldx.d $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %p = getelementptr i64, ptr @l, i64 %i
   %v = load i64, ptr %p
@@ -476,7 +476,7 @@ define i64 @pcrel_base_livein_offset(i64 %off) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(l)
 ; CHECK-NEXT:    addi.d $a1, $a1, %pc_lo12(l)
-; CHECK-NEXT:    ldx.d $a0, $a1, $a0
+; CHECK-NEXT:    ldx.d $a0, $a0, $a1
 ; CHECK-NEXT:    ret
   %p = getelementptr i8, ptr @l, i64 %off
   %v = load i64, ptr %p
@@ -521,7 +521,7 @@ define i64 @jump_table(i64 %x, ptr %out) nounwind {
 ; CHECK-NEXT:    slli.d $a2, $a2, 3
 ; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LJTI36_0)
 ; CHECK-NEXT:    addi.d $a3, $a3, %pc_lo12(.LJTI36_0)
-; CHECK-NEXT:    ldx.d $a2, $a3, $a2
+; CHECK-NEXT:    ldx.d $a2, $a2, $a3
 ; CHECK-NEXT:    jr $a2
 ; CHECK-NEXT:  .LBB36_2: # %bb1
 ; CHECK-NEXT:    ori $a2, $zero, 4
@@ -582,7 +582,7 @@ define i64 @index_from_call(ptr %a) nounwind {
 ; CHECK-NEXT:    move $fp, $a0
 ; CHECK-NEXT:    pcaddu18i $ra, %call36(get)
 ; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    ldx.d $a0, $fp, $a0
+; CHECK-NEXT:    ldx.d $a0, $a0, $fp
 ; CHECK-NEXT:    ld.d $fp, $sp, 0 # 8-byte Folded Reload
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
@@ -773,7 +773,7 @@ define i64 @chase_scaled(ptr %t, i64 %i0, i64 %n) nounwind {
 ; CHECK-NEXT:  .LBB43_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    slli.d $a1, $a1, 5
-; CHECK-NEXT:    ldx.d $a1, $a0, $a1
+; CHECK-NEXT:    ldx.d $a1, $a1, $a0
 ; CHECK-NEXT:    addi.d $a3, $a3, 1
 ; CHECK-NEXT:    blt $a3, $a2, .LBB43_1
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -803,7 +803,7 @@ define i64 @chase_masked(ptr %t, i64 %i0, i64 %m, i64 %n) nounwind {
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB44_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldx.d $a1, $a0, $a1
+; CHECK-NEXT:    ldx.d $a1, $a1, $a0
 ; CHECK-NEXT:    addi.d $a4, $a4, 1
 ; CHECK-NEXT:    and $a1, $a1, $a2
 ; CHECK-NEXT:    blt $a4, $a3, .LBB44_1
@@ -897,7 +897,7 @@ define ptr @chase_ptr_loaded_offset(ptr %n0, ptr %arena, ptr %key, i64 %len) nou
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB47_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldx.bu $a5, $a2, $a4
+; CHECK-NEXT:    ldx.bu $a5, $a4, $a2
 ; CHECK-NEXT:    slli.d $a5, $a5, 3
 ; CHECK-NEXT:    ldx.d $a0, $a0, $a5
 ; CHECK-NEXT:    addi.d $a4, $a4, 1
@@ -937,7 +937,7 @@ define i64 @chase_both(ptr %t, i64 %i0, i64 %m, i64 %n) nounwind {
 ; CHECK-NEXT:    add.d $a5, $a5, $a2
 ; CHECK-NEXT:    andi $a5, $a5, 4088
 ; CHECK-NEXT:    add.d $a1, $a0, $a1
-; CHECK-NEXT:    ldx.d $a1, $a1, $a5
+; CHECK-NEXT:    ldx.d $a1, $a5, $a1
 ; CHECK-NEXT:    addi.d $a4, $a4, 1
 ; CHECK-NEXT:    blt $a4, $a3, .LBB48_1
 ; CHECK-NEXT:  # %bb.2: # %exit
@@ -980,7 +980,7 @@ define i64 @outer_loop_base(ptr %t, i64 %n, i64 %m) nounwind {
 ; CHECK-NEXT:    # Parent Loop BB49_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    andi $a7, $a3, 1016
-; CHECK-NEXT:    ldx.d $a7, $a6, $a7
+; CHECK-NEXT:    ldx.d $a7, $a7, $a6
 ; CHECK-NEXT:    addi.d $a5, $a5, 1
 ; CHECK-NEXT:    add.d $a3, $a7, $a3
 ; CHECK-NEXT:    blt $a5, $a2, .LBB49_2
